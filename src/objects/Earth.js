@@ -5,12 +5,18 @@ class Earth {
 
 	constructor(game) {
 		this._game = game;
-		this.position = new vector2(0,0);
+		this.position = new vector2(0, 0);
 
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new RenderUtils(this._game);
 
+		//temp
+		this.bmd = game.make.bitmapData(1200, 600);
+		this.bmd.addToWorld();
+
 		this.isDebugged = true;
+		this.test1 = 0;
+
 	}
 
 	mass() {
@@ -67,19 +73,40 @@ class Earth {
 		return -5.37e-10 * altitude + 1.458e-5;
 	}
 
-	render(cameraBounds){
-		//Get dimensions of ellipse base on window size
+	render(cameraBounds) {
+
 		let ellipse = this._renderUtils.computeEllipseSize(this.position, cameraBounds, this.surfaceRadius());
+		let atmoEllipse = this._renderUtils.computeEllipseSize(this.position, cameraBounds, this.surfaceRadius() + this.atmosphereHeight());
 
-		//debugger;
-		this._earthGraphics.position.x = ellipse.x;
-		this._earthGraphics.position.y = ellipse.y;
-		//this._earthGraphics.moveTo(ellipse.x, ellipse.y);
-
-		this._earthGraphics.beginFill(0x009900);
-		this._earthGraphics.drawEllipse(ellipse.x, ellipse.y, ellipse.width, ellipse.height);
+		///Render the atmo
+		//////////
+		let grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - (ellipse.height*.0000938), ellipse.x, ellipse.y,
+			atmoEllipse.height);
+		grd.addColorStop(0, '#009900');
+		grd.addColorStop(0.005, '#0182b7');
+		grd.addColorStop(0.4, '#4db6ff');
+		grd.addColorStop(1, '#000000');
 		
+		this.bmd.cls();
+		this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
+
+
+		//////
+		//Render the surface
+		//Get dimensions of ellipse base on window size
+		this._game.game.debug.line('Earth Ellipse: X:' + ellipse.x + ' Y:' + ellipse.y + ' height:' + ellipse.height + ' width:' + ellipse.width);
+
+		this._earthGraphics.clear()
+		this._earthGraphics.beginFill(0x009900);
+
+		//Use arc when zoomed in since it has it renders the circle with better detail.
+		if (ellipse.width > 600)
+			this._earthGraphics.arc(ellipse.x, ellipse.y, ellipse.width, 0, -Math.PI * 2.0, true, 1000);
+		else
+			this._earthGraphics.drawEllipse(ellipse.x, ellipse.y, ellipse.width, ellipse.height);
+
 		this._earthGraphics.endFill();
+
 
 	}
 

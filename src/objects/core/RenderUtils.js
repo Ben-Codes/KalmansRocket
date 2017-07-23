@@ -5,14 +5,13 @@ class RenderUtils {
 
 	constructor(game) {
 		this._game = game;
-
 	}
 
 	computeEllipseSize(position, cameraBounds, radius) {
 
-		//debugger;
 		let screenRadius = (radius / cameraBounds.width) * this._game.scale.width;
 		let screenPosition = position.clone();
+
 		screenPosition.subtract(new vector2(cameraBounds.left, cameraBounds.top));
 
 		let screenU = screenPosition.x / cameraBounds.width;
@@ -22,10 +21,10 @@ class RenderUtils {
 		let screenY = screenV * this._game.scale.height;
 
 		return new rectangleD(
-			screenX - screenRadius,
-			screenY - screenRadius,
-			screenRadius * 2.0,
-			screenRadius * 2.0
+			screenX,
+			screenY,
+			screenRadius,
+			screenRadius
 		);
 	}
 

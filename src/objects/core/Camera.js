@@ -12,21 +12,20 @@ class Camera {
 	}
 
 	setZoom(zoom) {
-		zoom = this._game.math.clamp(this._zoom + zoom, .05, 1000000000000);
+
+		this._zoom = this._game.math.clamp(zoom, .05, 1000000000000);
 	}
 
-	update(deltaTime){
+	update(deltaTime) {
 		let targetPosition = this._target.position;
 		this._position.x(targetPosition.x());
 		this._position.y(targetPosition.y());
 	}
 
 	getBounds() {
-		
-		
+
 		let width = this._game.scale.width * this._zoom;
 		let height = this._game.scale.height * this._zoom;
-
 
 		let x = this._position.x - width * .5;
 		let y = this._position.y - height * .5;

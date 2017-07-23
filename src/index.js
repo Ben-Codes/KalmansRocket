@@ -6,8 +6,9 @@ class Game extends Phaser.Game {
 		super(1200, 600, Phaser.AUTO, 'content', null);
 		this.state.add('MainState', MainState, false);
 		this.state.start('MainState');
+		
+		this.scrollDelta = 0;
 	}
-
 }
 
 new Game();

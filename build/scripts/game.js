@@ -37,6 +37,7 @@ var Game = function (_Phaser$Game) {
 
 		_this.state.add('MainState', _MainState2.default, false);
 		_this.state.start('MainState');
+		_this.scrollDelta = 0;
 		return _this;
 	}
 
@@ -90,7 +91,12 @@ var Earth = function () {
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new _RenderUtils2.default(this._game);
 
+		//temp
+		this.bmd = game.make.bitmapData(1200, 600);
+		this.bmd.addToWorld();
+
 		this.isDebugged = true;
+		this.test1 = 0;
 	}
 
 	_createClass(Earth, [{
@@ -157,16 +163,31 @@ var Earth = function () {
 	}, {
 		key: 'render',
 		value: function render(cameraBounds) {
-			//Get dimensions of ellipse base on window size
+
 			var ellipse = this._renderUtils.computeEllipseSize(this.position, cameraBounds, this.surfaceRadius());
+			var atmoEllipse = this._renderUtils.computeEllipseSize(this.position, cameraBounds, this.surfaceRadius() + this.atmosphereHeight());
 
-			//debugger;
-			this._earthGraphics.position.x = ellipse.x;
-			this._earthGraphics.position.y = ellipse.y;
-			//this._earthGraphics.moveTo(ellipse.x, ellipse.y);
+			///Render the atmo
+			//////////
+			var grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - ellipse.height * .0000938, ellipse.x, ellipse.y, atmoEllipse.height);
+			grd.addColorStop(0, '#009900');
+			grd.addColorStop(0.005, '#0182b7');
+			grd.addColorStop(0.4, '#4db6ff');
+			grd.addColorStop(1, '#000000');
 
+			this.bmd.cls();
+			this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
+
+			//////
+			//Render the surface
+			//Get dimensions of ellipse base on window size
+			this._game.game.debug.line('Earth Ellipse: X:' + ellipse.x + ' Y:' + ellipse.y + ' height:' + ellipse.height + ' width:' + ellipse.width);
+
+			this._earthGraphics.clear();
 			this._earthGraphics.beginFill(0x009900);
-			this._earthGraphics.drawEllipse(ellipse.x, ellipse.y, ellipse.width, ellipse.height);
+
+			//Use arc when zoomed in since it has it renders the circle with better detail.
+			if (ellipse.width > 600) this._earthGraphics.arc(ellipse.x, ellipse.y, ellipse.width, 0, -Math.PI * 2.0, true, 1000);else this._earthGraphics.drawEllipse(ellipse.x, ellipse.y, ellipse.width, ellipse.height);
 
 			this._earthGraphics.endFill();
 		}
@@ -225,7 +246,8 @@ var Camera = function () {
 	_createClass(Camera, [{
 		key: 'setZoom',
 		value: function setZoom(zoom) {
-			zoom = this._game.math.clamp(this._zoom + zoom, .05, 1000000000000);
+
+			this._zoom = this._game.math.clamp(zoom, .05, 1000000000000);
 		}
 	}, {
 		key: 'update',
@@ -299,9 +321,9 @@ var RenderUtils = function () {
 		key: 'computeEllipseSize',
 		value: function computeEllipseSize(position, cameraBounds, radius) {
 
-			//debugger;
 			var screenRadius = radius / cameraBounds.width * this._game.scale.width;
 			var screenPosition = position.clone();
+
 			screenPosition.subtract(new _Vector2.default(cameraBounds.left, cameraBounds.top));
 
 			var screenU = screenPosition.x / cameraBounds.width;
@@ -310,7 +332,7 @@ var RenderUtils = function () {
 			var screenX = screenU * this._game.scale.width;
 			var screenY = screenV * this._game.scale.height;
 
-			return new _RectangleD2.default(screenX - screenRadius, screenY - screenRadius, screenRadius * 2.0, screenRadius * 2.0);
+			return new _RectangleD2.default(screenX, screenY, screenRadius, screenRadius);
 		}
 	}]);
 
@@ -589,12 +611,13 @@ var MainState = function (_Phaser$State) {
 	}, {
 		key: 'create',
 		value: function create() {
+
+			//Launch Button
 			this._isStarted = false;
 
 			this._startButton = this.add.button(this.world.centerX + 450, 550, 'startButton', this.startButtonClicked, this);
 			this._startButton.anchor.x = 0.5;
 			this._startButton.anchor.y = 0.5;
-
 			this._startButton.input.useHandCursor = true;
 
 			var text = this.add.text(this.world.centerX + 450, 550, "Launch", {
@@ -608,10 +631,16 @@ var MainState = function (_Phaser$State) {
 			this._startText = text;
 
 			//////////////////////
+			//Zoom
+
+			this.game.input.mouse.mouseWheelCallback = this.mouseWheel;
+			this._zoom = 1;
+
+			///////////////////////
 
 			this._earth = new _Earth2.default(this);
 			this._spacecraft = new _SpaceCraftBase2.default(this, this._earth);
-			this._simCamera = new _Camera2.default(this, this._spacecraft, 10);
+			this._simCamera = new _Camera2.default(this, this._spacecraft, this._zoom);
 		}
 	}, {
 		key: 'update',
@@ -631,9 +660,26 @@ var MainState = function (_Phaser$State) {
 	}, {
 		key: 'draw',
 		value: function draw() {
+			this.game.debug.start(20, 20, 'blue');
+
+			var craftPos = this._spacecraft.position;
+
+			this.game.debug.line('Spacecraft Position: X:' + craftPos.x + ' Y:' + craftPos.y);
+			//this.game.debug.line('Zoom: ' + this._zoom + ' D ' + this.game.scrollDelta );
 
 			var cameraBounds = this._simCamera.getBounds();
 			this._earth.render(cameraBounds);
+
+			this.game.debug.stop();
+
+			///////////////////////////////////////
+
+			if (this.game.scrollDelta > 0) this._zoom += this._zoom * this.game.scrollDelta;else if (this.game.scrollDelta < 0) this._zoom -= Math.abs(this._zoom * this.game.scrollDelta);
+
+			this._zoom = this.math.clamp(this._zoom, .05, 1000000000000);
+
+			this._simCamera.setZoom(this._zoom);
+			this.game.scrollDelta = 0;
 		}
 	}, {
 		key: 'startButtonClicked',
@@ -641,6 +687,16 @@ var MainState = function (_Phaser$State) {
 			this._isStarted = false;
 			this._startText.visible = false;
 			this._startButton.visible = false;
+		}
+	}, {
+		key: 'mouseWheel',
+		value: function mouseWheel(event) {
+
+			if (this.input.mouse.wheelDelta === Phaser.Mouse.WHEEL_UP) {
+				this.scrollDelta -= .5;
+			} else {
+				this.scrollDelta += 1.5;
+			}
 		}
 	}]);
 
