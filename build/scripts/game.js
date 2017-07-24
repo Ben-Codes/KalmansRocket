@@ -37,6 +37,7 @@ var Game = function (_Phaser$Game) {
 
 		_this.state.add('MainState', _MainState2.default, false);
 		_this.state.start('MainState');
+
 		_this.scrollDelta = 0;
 		return _this;
 	}
@@ -46,7 +47,7 @@ var Game = function (_Phaser$Game) {
 
 new Game();
 
-},{"states/MainState":8}],2:[function(require,module,exports){
+},{"states/MainState":12}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -322,8 +323,8 @@ var RenderUtils = function () {
 		value: function computeEllipseSize(position, cameraBounds, radius) {
 
 			var screenRadius = radius / cameraBounds.width * this._game.scale.width;
-			var screenPosition = position.clone();
 
+			var screenPosition = position.clone();
 			screenPosition.subtract(new _Vector2.default(cameraBounds.left, cameraBounds.top));
 
 			var screenU = screenPosition.x / cameraBounds.width;
@@ -333,6 +334,24 @@ var RenderUtils = function () {
 			var screenY = screenV * this._game.scale.height;
 
 			return new _RectangleD2.default(screenX, screenY, screenRadius, screenRadius);
+		}
+	}, {
+		key: 'computeBoundingBox',
+		value: function computeBoundingBox(position, cameraBounds, width, height) {
+
+			var screenWidth = width / cameraBounds.width * this._game.scale.width;
+			var screenHeight = height / cameraBounds.height * this._game.scale.height;
+
+			var screenPosition = position.clone();
+			screenPosition.subtract(new _Vector2.default(cameraBounds.left, cameraBounds.top));
+
+			var screenU = screenPosition.x / cameraBounds.width;
+			var screenV = screenPosition.y / cameraBounds.height;
+
+			var screenX = screenU * this._game.scale.width;
+			var screenY = screenV * this._game.scale.height;
+
+			return new _RectangleD2.default(screenX, screenY, screenWidth, screenHeight);
 		}
 	}]);
 
@@ -521,6 +540,14 @@ var _Vector = require('objects/math/Vector2');
 
 var _Vector2 = _interopRequireDefault(_Vector);
 
+var _RenderUtils = require('objects/core/RenderUtils');
+
+var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+var _SpaceCraftBase2 = require('objects/spaceCraft/SpaceCraftBase');
+
+var _SpaceCraftBase3 = _interopRequireDefault(_SpaceCraftBase2);
+
 function _interopRequireDefault(obj) {
 	return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -531,19 +558,406 @@ function _classCallCheck(instance, Constructor) {
 	}
 }
 
-var SpaceCraftBase = function SpaceCraftBase(game, earth) {
-	_classCallCheck(this, SpaceCraftBase);
+function _possibleConstructorReturn(self, call) {
+	if (!self) {
+		throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+	}return call && (typeof call === "object" || typeof call === "function") ? call : self;
+}
 
-	this._game = game;
-	this.earth = earth;
-	this.position = new _Vector2.default(0, -earth.surfaceRadius());
-	this.position.add(earth.position);
-	this.velocity = new _Vector2.default(0, 0);
-};
+function _inherits(subClass, superClass) {
+	if (typeof superClass !== "function" && superClass !== null) {
+		throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+	}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var BasePayload = function (_SpaceCraftBase) {
+	_inherits(BasePayload, _SpaceCraftBase);
+
+	function BasePayload(game, position) {
+		_classCallCheck(this, BasePayload);
+
+		var sprite = game.add.sprite(-9999, -9999, 'BasePayload');
+		sprite.anchor.setTo(.5, .5);
+
+		//Width: 4 meters Height 8.52 meters
+		return _possibleConstructorReturn(this, (BasePayload.__proto__ || Object.getPrototypeOf(BasePayload)).call(this, game, position, sprite, 4, 8.52, new _Vector2.default(0, 0)));
+	}
+
+	return BasePayload;
+}(_SpaceCraftBase3.default);
+
+exports.default = BasePayload;
+
+},{"objects/core/RenderUtils":4,"objects/math/Vector2":6,"objects/spaceCraft/SpaceCraftBase":11}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+var _RenderUtils = require('objects/core/RenderUtils');
+
+var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+var _SpaceCraftBase2 = require('objects/spaceCraft/SpaceCraftBase');
+
+var _SpaceCraftBase3 = _interopRequireDefault(_SpaceCraftBase2);
+
+function _interopRequireDefault(obj) {
+	return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
+}
+
+function _possibleConstructorReturn(self, call) {
+	if (!self) {
+		throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+	}return call && (typeof call === "object" || typeof call === "function") ? call : self;
+}
+
+function _inherits(subClass, superClass) {
+	if (typeof superClass !== "function" && superClass !== null) {
+		throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+	}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var Fairing = function (_SpaceCraftBase) {
+	_inherits(Fairing, _SpaceCraftBase);
+
+	function Fairing(game, position, isLeft) {
+		_classCallCheck(this, Fairing);
+
+		var offset = new _Vector2.default(0, 0);
+		var sprite = void 0;
+
+		if (isLeft) {
+			sprite = game.add.sprite(-9999, -9999, 'fairingLeft');
+			offset.x = -1.26;
+			offset.y = -2.2;
+		} else {
+			sprite = game.add.sprite(-9999, -9999, 'fairingRight');
+			offset.x = 1.26;
+			offset.y = -2.2;
+		}
+
+		sprite.anchor.setTo(.5, .5);
+
+		//Width: 2.59 meters Height 13.0 meters
+
+		var _this = _possibleConstructorReturn(this, (Fairing.__proto__ || Object.getPrototypeOf(Fairing)).call(this, game, position, sprite, 2.59, 13.0, offset));
+
+		_this._isLeft = isLeft;
+
+		return _this;
+	}
+
+	return Fairing;
+}(_SpaceCraftBase3.default);
+
+exports.default = Fairing;
+
+},{"objects/core/RenderUtils":4,"objects/math/Vector2":6,"objects/spaceCraft/SpaceCraftBase":11}],9:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+var _RenderUtils = require('objects/core/RenderUtils');
+
+var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+var _SpaceCraftBase2 = require('objects/spaceCraft/SpaceCraftBase');
+
+var _SpaceCraftBase3 = _interopRequireDefault(_SpaceCraftBase2);
+
+function _interopRequireDefault(obj) {
+	return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
+}
+
+function _possibleConstructorReturn(self, call) {
+	if (!self) {
+		throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+	}return call && (typeof call === "object" || typeof call === "function") ? call : self;
+}
+
+function _inherits(subClass, superClass) {
+	if (typeof superClass !== "function" && superClass !== null) {
+		throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+	}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var Falcon9S1 = function (_SpaceCraftBase) {
+	_inherits(Falcon9S1, _SpaceCraftBase);
+
+	function Falcon9S1(game, position) {
+		_classCallCheck(this, Falcon9S1);
+
+		var sprite = game.add.sprite(-9999, -9999, 'falcon9S1');
+		sprite.anchor.setTo(.5, .5);
+
+		//Width: 4.11 meters Height 47.812 meters
+		return _possibleConstructorReturn(this, (Falcon9S1.__proto__ || Object.getPrototypeOf(Falcon9S1)).call(this, game, position, sprite, 4.11, 47.812188, new _Vector2.default(0, 25.55)));
+	}
+
+	return Falcon9S1;
+}(_SpaceCraftBase3.default);
+
+exports.default = Falcon9S1;
+
+},{"objects/core/RenderUtils":4,"objects/math/Vector2":6,"objects/spaceCraft/SpaceCraftBase":11}],10:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+var _RenderUtils = require('objects/core/RenderUtils');
+
+var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+var _SpaceCraftBase2 = require('objects/spaceCraft/SpaceCraftBase');
+
+var _SpaceCraftBase3 = _interopRequireDefault(_SpaceCraftBase2);
+
+function _interopRequireDefault(obj) {
+	return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
+}
+
+function _possibleConstructorReturn(self, call) {
+	if (!self) {
+		throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+	}return call && (typeof call === "object" || typeof call === "function") ? call : self;
+}
+
+function _inherits(subClass, superClass) {
+	if (typeof superClass !== "function" && superClass !== null) {
+		throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+	}subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } });if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+}
+
+var Falcon9S2 = function (_SpaceCraftBase) {
+	_inherits(Falcon9S2, _SpaceCraftBase);
+
+	function Falcon9S2(game, position) {
+		_classCallCheck(this, Falcon9S2);
+
+		var sprite = game.add.sprite(-9999, -9999, 'falcon9S2');
+		sprite.anchor.setTo(.5, .5);
+
+		//Width: 3.706 meters Height 14.0018 meters
+		return _possibleConstructorReturn(this, (Falcon9S2.__proto__ || Object.getPrototypeOf(Falcon9S2)).call(this, game, position, sprite, 3.706, 14.0018, new _Vector2.default(0, 11.2)));
+	}
+
+	return Falcon9S2;
+}(_SpaceCraftBase3.default);
+
+exports.default = Falcon9S2;
+
+},{"objects/core/RenderUtils":4,"objects/math/Vector2":6,"objects/spaceCraft/SpaceCraftBase":11}],11:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+	};
+}();
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+var _RenderUtils = require('objects/core/RenderUtils');
+
+var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+function _interopRequireDefault(obj) {
+	return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
+}
+
+var SpaceCraftBase = function () {
+	function SpaceCraftBase(game, position, sprite, width, height, stageOffset) {
+		_classCallCheck(this, SpaceCraftBase);
+
+		this._sprite = sprite;
+
+		this._game = game;
+
+		this.position = position;
+		this.velocity = new _Vector2.default(0, 0);
+
+		this.roll = 0.0;
+		this.yaw = 0.0;
+		this.pitch = -Math.PI * 0.5;
+
+		this.width = width;
+		this.height = height;
+
+		this._stageOffset = stageOffset;
+		this.onGround = true;
+
+		this.parent = null;
+		this.children = [];
+
+		this._renderUtils = new _RenderUtils2.default(this._game);
+	}
+
+	_createClass(SpaceCraftBase, [{
+		key: 'setParent',
+		value: function setParent(parent) {
+			this.parent = parent;
+		}
+	}, {
+		key: 'addChild',
+		value: function addChild(child) {
+			this.children.push(child);
+		}
+	}, {
+		key: 'update',
+		value: function update(deltaTime) {
+
+			if (this.parent == null) {
+				var _iteratorNormalCompletion = true;
+				var _didIteratorError = false;
+				var _iteratorError = undefined;
+
+				try {
+
+					for (var _iterator = this.children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+						var spacecraft = _step.value;
+
+						spacecraft.updateChildren(this.position, this.velocity);
+					}
+				} catch (err) {
+					_didIteratorError = true;
+					_iteratorError = err;
+				} finally {
+					try {
+						if (!_iteratorNormalCompletion && _iterator.return) {
+							_iterator.return();
+						}
+					} finally {
+						if (_didIteratorError) {
+							throw _iteratorError;
+						}
+					}
+				}
+			}
+		}
+	}, {
+		key: 'updateChildren',
+		value: function updateChildren(parentPosition, velocity) {
+
+			var rotationOffset = new _Vector2.default(Math.cos(this.pitch), Math.sin(this.pitch));
+
+			var newPosition = new _Vector2.default(this._stageOffset.x * rotationOffset.y + this._stageOffset.y * rotationOffset.x, -this._stageOffset.x * rotationOffset.x + this._stageOffset.y * rotationOffset.y);
+
+			var pPosition = parentPosition.clone();
+
+			pPosition.subtract(newPosition);
+			this.position = pPosition;
+			this.velocity.x = velocity.x;
+			this.velocity.y = velocity.y;
+
+			var _iteratorNormalCompletion2 = true;
+			var _didIteratorError2 = false;
+			var _iteratorError2 = undefined;
+
+			try {
+				for (var _iterator2 = this.children[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+					var spacecraft = _step2.value;
+
+					//debugger;
+					spacecraft.updateChildren(this.position, this.velocity);
+				}
+			} catch (err) {
+				_didIteratorError2 = true;
+				_iteratorError2 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion2 && _iterator2.return) {
+						_iterator2.return();
+					}
+				} finally {
+					if (_didIteratorError2) {
+						throw _iteratorError2;
+					}
+				}
+			}
+		}
+	}, {
+		key: 'render',
+		value: function render(cameraBounds) {
+
+			if (this.position == null) debugger;
+
+			//Todo: Check if ship is in viewport, save render time
+			var boundingBox = this._renderUtils.computeBoundingBox(this.position, cameraBounds, this.width, this.height);
+
+			//RenderBelow
+
+			//RenderShip
+			//debugger;
+			this._sprite.position.x = boundingBox.x;
+			this._sprite.position.y = boundingBox.y;
+
+			this._sprite.rotation = this.pitch + Math.PI * 0.5;
+
+			this._sprite.width = boundingBox.width;
+			this._sprite.height = boundingBox.height;
+
+			//RenderAbove
+		}
+	}]);
+
+	return SpaceCraftBase;
+}();
 
 exports.default = SpaceCraftBase;
 
-},{"objects/math/Vector2":6}],8:[function(require,module,exports){
+},{"objects/core/RenderUtils":4,"objects/math/Vector2":6}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -564,13 +978,29 @@ var _Earth = require('objects/Earth');
 
 var _Earth2 = _interopRequireDefault(_Earth);
 
-var _SpaceCraftBase = require('objects/spaceCraft/SpaceCraftBase');
+var _Falcon9S = require('objects/spaceCraft/Falcon9S1');
 
-var _SpaceCraftBase2 = _interopRequireDefault(_SpaceCraftBase);
+var _Falcon9S2 = _interopRequireDefault(_Falcon9S);
+
+var _Falcon9S3 = require('objects/spaceCraft/Falcon9S2');
+
+var _Falcon9S4 = _interopRequireDefault(_Falcon9S3);
+
+var _Fairing = require('objects/spaceCraft/Fairing');
+
+var _Fairing2 = _interopRequireDefault(_Fairing);
+
+var _BasePayload = require('objects/spaceCraft/BasePayload');
+
+var _BasePayload2 = _interopRequireDefault(_BasePayload);
 
 var _Camera = require('objects/core/Camera');
 
 var _Camera2 = _interopRequireDefault(_Camera);
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
 
 function _interopRequireDefault(obj) {
 	return obj && obj.__esModule ? obj : { default: obj };
@@ -607,6 +1037,12 @@ var MainState = function (_Phaser$State) {
 		key: 'preload',
 		value: function preload() {
 			this.load.spritesheet('startButton', 'assets/red_button13.png', 190, 49, 1);
+			//TODO: Find a way to move to object classes
+			this.load.spritesheet('falcon9S1', 'assets/spacecraft/S1.png', 100, 1170, 1);
+			this.load.spritesheet('falcon9S2', 'assets/spacecraft/S2.png', 90, 340, 1);
+			this.load.spritesheet('BasePayload', 'assets/spacecraft/default.png', 200, 426, 1);
+			this.load.spritesheet('fairingLeft', 'assets/spacecraft/fairingLeft.png', 62, 314, 1);
+			this.load.spritesheet('fairingRight', 'assets/spacecraft/fairingRight.png', 62, 314, 1);
 		}
 	}, {
 		key: 'create',
@@ -614,11 +1050,12 @@ var MainState = function (_Phaser$State) {
 
 			//Launch Button
 			this._isStarted = false;
+			this._buttonGroup = this.game.add.group();
 
 			this._startButton = this.add.button(this.world.centerX + 450, 550, 'startButton', this.startButtonClicked, this);
-			this._startButton.anchor.x = 0.5;
-			this._startButton.anchor.y = 0.5;
+			this._startButton.anchor.setTo(.5, .5);
 			this._startButton.input.useHandCursor = true;
+			this._buttonGroup.add(this._startButton);
 
 			var text = this.add.text(this.world.centerX + 450, 550, "Launch", {
 				fill: "#e9eecf"
@@ -629,25 +1066,28 @@ var MainState = function (_Phaser$State) {
 			text.fontSize = 20;
 			text.align = 'center';
 			this._startText = text;
+			this._buttonGroup.add(text);
 
 			//////////////////////
 			//Zoom
 
 			this.game.input.mouse.mouseWheelCallback = this.mouseWheel;
-			this._zoom = 1;
+			this._zoom = .15;
 
 			///////////////////////
 
 			this._earth = new _Earth2.default(this);
-			this._spacecraft = new _SpaceCraftBase2.default(this, this._earth);
-			this._simCamera = new _Camera2.default(this, this._spacecraft, this._zoom);
+			this._spacecraft = this.createSpacecraft();
+			this._simCamera = new _Camera2.default(this, this._spacecraft[0], this._zoom);
+
+			this.computePhysics();
 		}
 	}, {
 		key: 'update',
 		value: function update() {
 
 			if (this._isStarted) {
-				computePhysics();
+				this.computePhysics();
 			}
 
 			this.draw();
@@ -655,20 +1095,68 @@ var MainState = function (_Phaser$State) {
 	}, {
 		key: 'computePhysics',
 		value: function computePhysics() {
-			//TODO
+			var _iteratorNormalCompletion = true;
+			var _didIteratorError = false;
+			var _iteratorError = undefined;
+
+			try {
+
+				for (var _iterator = this._spacecraft[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+					var spacecraft = _step.value;
+
+					spacecraft.update(0);
+				}
+			} catch (err) {
+				_didIteratorError = true;
+				_iteratorError = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion && _iterator.return) {
+						_iterator.return();
+					}
+				} finally {
+					if (_didIteratorError) {
+						throw _iteratorError;
+					}
+				}
+			}
 		}
 	}, {
 		key: 'draw',
 		value: function draw() {
+
 			this.game.debug.start(20, 20, 'blue');
 
-			var craftPos = this._spacecraft.position;
-
+			var craftPos = this._spacecraft[0].position;
 			this.game.debug.line('Spacecraft Position: X:' + craftPos.x + ' Y:' + craftPos.y);
-			//this.game.debug.line('Zoom: ' + this._zoom + ' D ' + this.game.scrollDelta );
+			this.game.debug.line('Zoom: ' + this._zoom + ' D ' + this.game.scrollDelta);
 
 			var cameraBounds = this._simCamera.getBounds();
 			this._earth.render(cameraBounds);
+			var _iteratorNormalCompletion2 = true;
+			var _didIteratorError2 = false;
+			var _iteratorError2 = undefined;
+
+			try {
+				for (var _iterator2 = this._spacecraft[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+					var spacecraft = _step2.value;
+
+					spacecraft.render(cameraBounds);
+				}
+			} catch (err) {
+				_didIteratorError2 = true;
+				_iteratorError2 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion2 && _iterator2.return) {
+						_iterator2.return();
+					}
+				} finally {
+					if (_didIteratorError2) {
+						throw _iteratorError2;
+					}
+				}
+			}
 
 			this.game.debug.stop();
 
@@ -680,6 +1168,39 @@ var MainState = function (_Phaser$State) {
 
 			this._simCamera.setZoom(this._zoom);
 			this.game.scrollDelta = 0;
+
+			/////
+
+			this.game.world.bringToTop(this._buttonGroup);
+		}
+	}, {
+		key: 'createSpacecraft',
+		value: function createSpacecraft() {
+			var position = new _Vector2.default(0, -this._earth.surfaceRadius());
+			position.add(this._earth.position);
+
+			var payload = new _BasePayload2.default(this, position);
+
+			var zero = new _Vector2.default(0, 0);
+
+			var leftFairing = new _Fairing2.default(this, zero.clone(), true);
+			var rightFairing = new _Fairing2.default(this, zero.clone(), false);
+
+			payload.addChild(leftFairing);
+			payload.addChild(rightFairing);
+			leftFairing.setParent(payload);
+			rightFairing.setParent(payload);
+
+			var f9s2 = new _Falcon9S4.default(this, zero.clone());
+			var f9s1 = new _Falcon9S2.default(this, zero.clone());
+
+			payload.addChild(f9s2);
+			f9s2.setParent(payload);
+
+			f9s2.addChild(f9s1);
+			f9s1.setParent(f9s2);
+
+			return [payload, f9s2, f9s1, leftFairing, rightFairing];
 		}
 	}, {
 		key: 'startButtonClicked',
@@ -705,5 +1226,5 @@ var MainState = function (_Phaser$State) {
 
 exports.default = MainState;
 
-},{"objects/Earth":2,"objects/core/Camera":3,"objects/spaceCraft/SpaceCraftBase":7}]},{},[1])
+},{"objects/Earth":2,"objects/core/Camera":3,"objects/math/Vector2":6,"objects/spaceCraft/BasePayload":7,"objects/spaceCraft/Fairing":8,"objects/spaceCraft/Falcon9S1":9,"objects/spaceCraft/Falcon9S2":10}]},{},[1])
 //# sourceMappingURL=game.js.map
