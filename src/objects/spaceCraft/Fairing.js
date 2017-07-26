@@ -27,6 +27,7 @@ class Fairing extends SpaceCraftBase {
 		super(game, position, sprite, 2.59, 13.0, offset);
 
 		this._isLeft = isLeft;
+		this.aeroDynamicProperties = "ExposedToAirFlow";
 
 	}
 

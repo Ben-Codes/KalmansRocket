@@ -119,10 +119,8 @@ class MainState extends Phaser.State {
 		let leftFairing = new Fairing(this, zero.clone(), true);
 		let rightFairing = new Fairing(this, zero.clone(), false);
 
-		payload.addChild(leftFairing);
-		payload.addChild(rightFairing);
-		leftFairing.setParent(payload);
-		rightFairing.setParent(payload);
+		payload.addFairings(leftFairing, rightFairing);
+
 
 		let f9s2 = new Falcon9S2(this, zero.clone());
 		let f9s1 = new Falcon9S1(this, zero.clone());

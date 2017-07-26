@@ -87,7 +87,7 @@ var Earth = function () {
 		_classCallCheck(this, Earth);
 
 		this._game = game;
-		this.position = new _Vector2.default(0, 0);
+		this.position = _Vector2.default.zero();
 
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new _RenderUtils2.default(this._game);
@@ -97,7 +97,6 @@ var Earth = function () {
 		this.bmd.addToWorld();
 
 		this.isDebugged = true;
-		this.test1 = 0;
 	}
 
 	_createClass(Earth, [{
@@ -119,6 +118,11 @@ var Earth = function () {
 		key: 'rotationRate',
 		value: function rotationRate() {
 			return -7.2722052166e-5;
+		}
+	}, {
+		key: 'rotationPeriod',
+		value: function rotationPeriod() {
+			return 86400;
 		}
 
 		// https://www.grc.nasa.gov/www/k-12/rocket/atmos.html
@@ -494,9 +498,9 @@ var Vector2 = function () {
 		}
 	}, {
 		key: "multiply",
-		value: function multiply(v) {
-			this.x *= v.x;
-			this.y *= v.y;
+		value: function multiply(scaler) {
+			this.x *= scaler;
+			this.y *= scaler;
 		}
 	}, {
 		key: "divide",
@@ -522,6 +526,16 @@ var Vector2 = function () {
 			this.x /= len;
 			this.y /= len;
 		}
+	}, {
+		key: "LengthSquared",
+		value: function LengthSquared() {
+			return this.x * this.x + this.y * this.y;
+		}
+	}], [{
+		key: "zero",
+		value: function zero() {
+			return new Vector2(0, 0);
+		}
 	}]);
 
 	return Vector2;
@@ -535,6 +549,16 @@ exports.default = Vector2;
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+
+var _createClass = function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+	};
+}();
 
 var _Vector = require('objects/math/Vector2');
 
@@ -580,8 +604,31 @@ var BasePayload = function (_SpaceCraftBase) {
 		sprite.anchor.setTo(.5, .5);
 
 		//Width: 4 meters Height 8.52 meters
-		return _possibleConstructorReturn(this, (BasePayload.__proto__ || Object.getPrototypeOf(BasePayload)).call(this, game, position, sprite, 4, 8.52, new _Vector2.default(0, 0)));
+
+		//TODO: Use enums
+		var _this = _possibleConstructorReturn(this, (BasePayload.__proto__ || Object.getPrototypeOf(BasePayload)).call(this, game, position, sprite, 4, 8.52, new _Vector2.default(0, 0)));
+
+		_this.aeroDynamicProperties = "ExposedToAirFlow";
+
+		_this._deployedFairings = true;
+
+		return _this;
 	}
+
+	_createClass(BasePayload, [{
+		key: 'addFairings',
+		value: function addFairings(leftFairing, rightFairing) {
+			this._leftFairing = leftFairing;
+			this._rightFairing = rightFairing;
+
+			this.addChild(leftFairing);
+			this.addChild(rightFairing);
+			leftFairing.setParent(this);
+			rightFairing.setParent(this);
+
+			this._deployedFairings = false;
+		}
+	}]);
 
 	return BasePayload;
 }(_SpaceCraftBase3.default);
@@ -655,6 +702,7 @@ var Fairing = function (_SpaceCraftBase) {
 		var _this = _possibleConstructorReturn(this, (Fairing.__proto__ || Object.getPrototypeOf(Fairing)).call(this, game, position, sprite, 2.59, 13.0, offset));
 
 		_this._isLeft = isLeft;
+		_this.aeroDynamicProperties = "ExposedToAirFlow";
 
 		return _this;
 	}
@@ -715,7 +763,13 @@ var Falcon9S1 = function (_SpaceCraftBase) {
 		sprite.anchor.setTo(.5, .5);
 
 		//Width: 4.11 meters Height 47.812 meters
-		return _possibleConstructorReturn(this, (Falcon9S1.__proto__ || Object.getPrototypeOf(Falcon9S1)).call(this, game, position, sprite, 4.11, 47.812188, new _Vector2.default(0, 25.55)));
+
+		var _this = _possibleConstructorReturn(this, (Falcon9S1.__proto__ || Object.getPrototypeOf(Falcon9S1)).call(this, game, position, sprite, 4.11, 47.812188, new _Vector2.default(0, 25.55)));
+
+		_this.aeroDynamicProperties = "ExtendsFineness";
+		_this._leftFairing = null;
+		_this._rightFairing = null;
+		return _this;
 	}
 
 	return Falcon9S1;
@@ -774,7 +828,12 @@ var Falcon9S2 = function (_SpaceCraftBase) {
 		sprite.anchor.setTo(.5, .5);
 
 		//Width: 3.706 meters Height 14.0018 meters
-		return _possibleConstructorReturn(this, (Falcon9S2.__proto__ || Object.getPrototypeOf(Falcon9S2)).call(this, game, position, sprite, 3.706, 14.0018, new _Vector2.default(0, 11.2)));
+
+		var _this = _possibleConstructorReturn(this, (Falcon9S2.__proto__ || Object.getPrototypeOf(Falcon9S2)).call(this, game, position, sprite, 3.706, 14.0018, new _Vector2.default(0, 11.2)));
+
+		_this.aeroDynamicProperties = "ExtendsFineness";
+
+		return _this;
 	}
 
 	return Falcon9S2;
@@ -826,7 +885,20 @@ var SpaceCraftBase = function () {
 		this._game = game;
 
 		this.position = position;
-		this.velocity = new _Vector2.default(0, 0);
+		this.velocity = _Vector2.default.zero();
+
+		this.mass = 0;
+		this.gravitationaParent = null;
+
+		this.accelerationG = _Vector2.default.zero();
+		this.accelerationD = _Vector2.default.zero();
+		this.accelerationN = _Vector2.default.zero();
+		this.accelerationL = _Vector2.default.zero();
+
+		this.machNumber = 0.0;
+
+		this.apogee = 0.0;
+		this.perigee = 0.0;
 
 		this.roll = 0.0;
 		this.yaw = 0.0;
@@ -840,6 +912,8 @@ var SpaceCraftBase = function () {
 
 		this.parent = null;
 		this.children = [];
+
+		this.aeroDynamicProperties = "None";
 
 		this._renderUtils = new _RenderUtils2.default(this._game);
 	}
@@ -949,6 +1023,190 @@ var SpaceCraftBase = function () {
 			this._sprite.height = boundingBox.height;
 
 			//RenderAbove
+		}
+	}, {
+		key: 'resetAccelerations',
+		value: function resetAccelerations() {
+			this.accelerationG = _Vector2.default.zero();
+			this.accelerationD = _Vector2.default.zero();
+			this.accelerationN = _Vector2.default.zero();
+			this.accelerationL = _Vector2.default.zero();
+		}
+	}, {
+		key: 'getRelativeAltitude',
+		value: function getRelativeAltitude() {
+			if (this.gravitationaParent == null) return 0;
+
+			var diffrence = this.position.clone();
+			diffrence.subtract(this.gravitationaParent.position);
+
+			return diffrence.length();
+		}
+	}, {
+		key: 'getRelativeVelocity',
+		value: function getRelativeVelocity() {
+			if (this.gravitationaParent == null) return _Vector2.default.zero;
+
+			var diffrence = this.velocity.clone();
+			return diffrence.subtract(this.gravitationaParent.velocity);
+		}
+	}, {
+		key: 'getTotalHeight',
+		value: function getTotalHeight() {
+			var totalHeight = height;
+
+			var _iteratorNormalCompletion3 = true;
+			var _didIteratorError3 = false;
+			var _iteratorError3 = undefined;
+
+			try {
+				for (var _iterator3 = this.children[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+					var spacecraft = _step3.value;
+
+					totalHeight += spacecraft._getChildHeight();
+				}
+			} catch (err) {
+				_didIteratorError3 = true;
+				_iteratorError3 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion3 && _iterator3.return) {
+						_iterator3.return();
+					}
+				} finally {
+					if (_didIteratorError3) {
+						throw _iteratorError3;
+					}
+				}
+			}
+
+			return totalHeight;
+		}
+	}, {
+		key: '_getChildHeight',
+		value: function _getChildHeight() {
+
+			var totalHeight = 0;
+
+			if (this.aeroDynamicProperties == "ExtendsFineness") totalHeight += height;
+
+			var _iteratorNormalCompletion4 = true;
+			var _didIteratorError4 = false;
+			var _iteratorError4 = undefined;
+
+			try {
+				for (var _iterator4 = this.children[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+					var spacecraft = _step4.value;
+
+					spacecraft._getChildHeight();
+				}
+			} catch (err) {
+				_didIteratorError4 = true;
+				_iteratorError4 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion4 && _iterator4.return) {
+						_iterator4.return();
+					}
+				} finally {
+					if (_didIteratorError4) {
+						throw _iteratorError4;
+					}
+				}
+			}
+
+			return totalHeight;
+		}
+	}, {
+		key: 'resolveGrav',
+		value: function resolveGrav(earth) {
+
+			///gravity
+
+			if (this.parent != null) return;
+
+			this.gravitationaParent = earth;
+
+			var diff_position = earth.position.clone();
+			diff_position.subtract(this.position);
+
+			var r2 = diff_position.LengthSquared();
+			var mass_dist_ratio = earth.mass() / r2;
+
+			//to far
+			if (mass_dist_ratio < 2500) {
+				return;
+			}
+
+			var GravitationConstant = 6.67384e-11;
+
+			diff_position.normalize();
+
+			mass_dist_ratio = mass_dist_ratio * GravitationConstant;
+			diff_position.multiply(mass_dist_ratio);
+			this.accelerationG.add(diff_position);
+
+			this._resolveAtmo(earth);
+		}
+	}, {
+		key: 'resolveAtmo',
+		value: function resolveAtmo(earth) {
+			diff_position = earth.position.clone();
+			diff_position.subtract(this.position);
+
+			var heightOffset = 0;
+			if (this.children.length > 0) heightOffset = getTotalHeight() - this.height * .5;else heightOffset = this.height * .5;
+
+			var distance = diff_position.length() - heightOffset;
+
+			diff_position.normalize();
+			var altitude = distance - earth.SurfaceRadius;
+
+			//In atmo?
+			if (altitude < earth.atmosphereHeight()) {
+				var surfaceNormal = new _Vector2.default(-diff_position.y, diff_position.x);
+
+				// Distance of circumference at this altitude ( c= 2r * pi )
+				var pathCircumference = 2 * Math.PI * distance;
+				var rotationalSpeed = pathCircumference / earth.rotationPeriod();
+
+				//TODO: Ground collision;
+
+				var atmoDensity = earth.getAtmosphericDensity(altitude);
+
+				var relativeVelocity = earth.velocity.clone();
+				relativeVelocity.add(surfaceNormal);
+				relativeVelocity.multiply(rotationalSpeed);
+
+				var velocityMagnitude = relativeVelocity.LengthSquared();
+
+				if (velocityMagnitude > 0) {
+
+					//M*sec
+					var speed = relativeVelocity.length();
+
+					var HeatingRate = 1.83e-4 * Math.Pow(speed, 3) * Math.Sqrt(atmoDensity / (this.width * 0.5));
+
+					//totalFormDragCoefficient();
+					//totalSkinFrictionCoefficient();
+					//totalLiftCoefficient();
+				}
+			}
+		}
+	}, {
+		key: 'getBaseCd',
+		value: function getBaseCd(cd) {
+			if (this.machNumber > 1.0) {
+				var exp = Math.exp(0.3 / this.machNumber);
+				return cd * 1.4 * exp;
+			}
+
+			return cd;
+		}
+	}, {
+		key: 'getSkinFrictionCoefficient',
+		value: function getSkinFrictionCoefficient() {
+			var velocity = getRelativeAltitude();
 		}
 	}]);
 
@@ -1186,10 +1444,7 @@ var MainState = function (_Phaser$State) {
 			var leftFairing = new _Fairing2.default(this, zero.clone(), true);
 			var rightFairing = new _Fairing2.default(this, zero.clone(), false);
 
-			payload.addChild(leftFairing);
-			payload.addChild(rightFairing);
-			leftFairing.setParent(payload);
-			rightFairing.setParent(payload);
+			payload.addFairings(leftFairing, rightFairing);
 
 			var f9s2 = new _Falcon9S4.default(this, zero.clone());
 			var f9s1 = new _Falcon9S2.default(this, zero.clone());

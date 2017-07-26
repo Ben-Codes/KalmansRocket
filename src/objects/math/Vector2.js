@@ -29,9 +29,9 @@ class Vector2 {
 		this.y -= v.y;
 	}
 
-	multiply(v) {
-		this.x *= v.x;
-		this.y *= v.y;
+	multiply(scaler) {
+		this.x *= scaler;
+		this.y *= scaler;
 	}
 
 	divide(v) {
@@ -52,6 +52,15 @@ class Vector2 {
 		let len = length();
 		this.x /= len;
 		this.y /= len;
+	}
+
+	LengthSquared()
+    {
+        return this.x * this.x + this.y * this.y;
+	}
+
+	static zero(){
+		return new Vector2(0,0);
 	}
 
 }

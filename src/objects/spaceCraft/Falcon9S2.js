@@ -12,6 +12,8 @@ class Falcon9S2 extends SpaceCraftBase {
 		//Width: 3.706 meters Height 14.0018 meters
 		super(game, position, sprite, 3.706, 14.0018, new vector2(0, 11.2));
 
+		this.aeroDynamicProperties = "ExtendsFineness";
+
 	}
 
 }

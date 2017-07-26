@@ -5,7 +5,7 @@ class Earth {
 
 	constructor(game) {
 		this._game = game;
-		this.position = new vector2(0, 0);
+		this.position = vector2.zero();
 
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new RenderUtils(this._game);
@@ -15,7 +15,6 @@ class Earth {
 		this.bmd.addToWorld();
 
 		this.isDebugged = true;
-		this.test1 = 0;
 
 	}
 
@@ -33,6 +32,10 @@ class Earth {
 
 	rotationRate() {
 		return -7.2722052166e-5;
+	}
+
+	rotationPeriod(){
+		return 86400;
 	}
 
 	// https://www.grc.nasa.gov/www/k-12/rocket/atmos.html
