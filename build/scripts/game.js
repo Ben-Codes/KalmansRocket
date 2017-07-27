@@ -92,6 +92,8 @@ var Earth = function () {
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new _RenderUtils2.default(this._game);
 
+		this.pitch = 0.0;
+
 		//temp
 		this.bmd = game.make.bitmapData(1200, 600);
 		this.bmd.addToWorld();
@@ -438,11 +440,17 @@ var rectangleD = function () {
 exports.default = rectangleD;
 
 },{}],6:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+	return typeof obj;
+} : function (obj) {
+	return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+};
 
 var _createClass = function () {
 	function defineProperties(target, props) {
@@ -469,57 +477,62 @@ var Vector2 = function () {
 	}
 
 	_createClass(Vector2, [{
-		key: "reset",
+		key: 'reset',
 		value: function reset() {
 			this.x = 0;
 			this.y = 0;
 		}
 	}, {
-		key: "length",
+		key: 'length',
 		value: function length() {
 			return Math.sqrt(this.x * this.x + this.y * this.y);
 		}
 	}, {
-		key: "clone",
+		key: 'clone',
 		value: function clone() {
 			return new Vector2(this.x, this.y);
 		}
 	}, {
-		key: "add",
+		key: 'add',
 		value: function add(v) {
 			this.x += v.x;
 			this.y += v.y;
 		}
 	}, {
-		key: "subtract",
+		key: 'subtract',
 		value: function subtract(v) {
 			this.x -= v.x;
 			this.y -= v.y;
 		}
 	}, {
-		key: "multiply",
+		key: 'multiply',
 		value: function multiply(scaler) {
 			this.x *= scaler;
 			this.y *= scaler;
 		}
 	}, {
-		key: "divide",
+		key: 'divide',
 		value: function divide(v) {
-			this.x /= v.x;
-			this.y /= v.y;
+			if ((typeof v === 'undefined' ? 'undefined' : _typeof(v)) === 'object') {
+				this.x /= v.x;
+				this.y /= v.y;
+			} else {
+				this.x /= v;
+				this.y /= v;
+			}
 		}
 	}, {
-		key: "dot",
+		key: 'dot',
 		value: function dot(v) {
 			return this.x * v.x + this.y * v.y;
 		}
 	}, {
-		key: "cross",
+		key: 'cross',
 		value: function cross(v) {
 			return this.x * v.y - this.y * v.x;
 		}
 	}, {
-		key: "normalize",
+		key: 'normalize',
 		value: function normalize() {
 
 			var len = length();
@@ -527,12 +540,17 @@ var Vector2 = function () {
 			this.y /= len;
 		}
 	}, {
-		key: "LengthSquared",
+		key: 'LengthSquared',
 		value: function LengthSquared() {
 			return this.x * this.x + this.y * this.y;
 		}
+	}, {
+		key: 'angle',
+		value: function angle() {
+			return Math.atan2(this.y, this.x);
+		}
 	}], [{
-		key: "zero",
+		key: 'zero',
 		value: function zero() {
 			return new Vector2(0, 0);
 		}
@@ -611,7 +629,6 @@ var BasePayload = function (_SpaceCraftBase) {
 		_this.aeroDynamicProperties = "ExposedToAirFlow";
 
 		_this._deployedFairings = true;
-
 		return _this;
 	}
 
@@ -628,6 +645,84 @@ var BasePayload = function (_SpaceCraftBase) {
 
 			this._deployedFairings = false;
 		}
+	}, {
+		key: 'formDragCoefficient',
+		value: function formDragCoefficient() {
+			var baseCD = this.getBaseCd(0.4);
+			var alpha = this.getAlpha();
+
+			return baseCD * Math.cos(alpha);
+		}
+	}, {
+		key: 'formLiftCoefficient',
+		value: function formLiftCoefficient() {
+			//if (!this._deployedFairings) {
+			//	return this._leftFairing.formLiftCoefficient() +
+			//		this._rightFairing.formLiftCoefficient();
+			//}
+			//Fairings are children
+
+			return 0;
+		}
+	}, {
+		key: 'exposedSurfaceArea',
+		value: function exposedSurfaceArea() {
+
+			if (!this._deployedFairings) {
+				//return this._leftFairing.exposedSurfaceArea() +
+				//	this._rightFairing.exposedSurfaceArea();
+				//Fairings are children
+				return 0;
+			}
+
+			return 1;
+		}
+	}, {
+		key: 'frontalArea',
+		value: function frontalArea() {
+
+			if (!this._deployedFairings) {
+				//return this._leftFairing.frontalArea() +
+				//	this._rightFairing.frontalArea();
+				//Fairings are children
+				return 0;
+			}
+
+			return 1;
+		}
+	}, {
+		key: 'liftingSurfaceArea',
+		value: function liftingSurfaceArea() {
+			if (!this._deployedFairings) {
+				//return this._leftFairing.liftingSurfaceArea() +
+				//	this._rightFairing.liftingSurfaceArea();
+				//Fairings are children
+				return 0;
+			}
+
+			return 1;
+		}
+	}, {
+		key: 'deployFairing',
+		value: function deployFairing() {
+			this._deployedFairings = false;
+
+			this.children.splice(this.children.indexOf(this._leftFairing), 1);
+			this.children.splice(this.children.indexOf(this._rightFairing), 1);
+
+			this._leftFairing.stage();
+			this._rightFairing.stage();
+		}
+	}, {
+		key: 'dryMass',
+		value: function dryMass() {
+			if (!this._deployedFairings) {
+				//return this._leftFairing.dryMass() +
+				//	this._rightFairing.dryMass();
+				//Fairings are children
+			}
+			return 0;
+		}
 	}]);
 
 	return BasePayload;
@@ -641,6 +736,16 @@ exports.default = BasePayload;
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+
+var _createClass = function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+	};
+}();
 
 var _Vector = require('objects/math/Vector2');
 
@@ -707,6 +812,51 @@ var Fairing = function (_SpaceCraftBase) {
 		return _this;
 	}
 
+	_createClass(Fairing, [{
+		key: 'stagingForce',
+		value: function stagingForce() {
+			return 1500;
+		}
+	}, {
+		key: 'formDragCoefficient',
+		value: function formDragCoefficient() {
+			var baseCD = this.getBaseCd(0.4);
+			var alpha = this.getAlpha();
+
+			return baseCD * Math.cos(alpha);
+		}
+	}, {
+		key: 'formLiftCoefficient',
+		value: function formLiftCoefficient() {
+			var baseCD = this.getBaseCd(0.6);
+			var alpha = this.getAlpha();
+
+			return baseCD * Math.sin(alpha * 2.0);
+		}
+	}, {
+		key: 'exposedSurfaceArea',
+		value: function exposedSurfaceArea() {
+
+			return 2 * Math.PI * (this.width / 2) * this.height + this.frontalArea();
+		}
+	}, {
+		key: 'frontalArea',
+		value: function frontalArea() {
+
+			return Math.PI * Math.pow(this.width / 2, 2);
+		}
+	}, {
+		key: 'liftingSurfaceArea',
+		value: function liftingSurfaceArea() {
+			return this.width * this.height;
+		}
+	}, {
+		key: 'dryMass',
+		value: function dryMass() {
+			return 875;
+		}
+	}]);
+
 	return Fairing;
 }(_SpaceCraftBase3.default);
 
@@ -718,6 +868,16 @@ exports.default = Fairing;
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+
+var _createClass = function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+	};
+}();
 
 var _Vector = require('objects/math/Vector2');
 
@@ -772,6 +932,67 @@ var Falcon9S1 = function (_SpaceCraftBase) {
 		return _this;
 	}
 
+	_createClass(Falcon9S1, [{
+		key: 'formDragCoefficient',
+		value: function formDragCoefficient() {
+
+			var baseCD = this.getBaseCd(0.4);
+			var alpha = this.getAlpha();
+
+			var isRetro = false;
+
+			if (alpha > Math.PI / 2 || alpha < -(Math.PI / 2)) {
+				//LandingLegs
+
+				//GridFins
+
+				baseCD = this.getBaseCd(0.8);
+
+				isRetro = true;
+			}
+
+			var dragCoefficient = Math.abs(baseCD * Math.cos(alpha));
+			var dragPreservation = 1.0;
+
+			if (isRetro) {
+
+				if (this.throttle > 0 && this.machNumber > 1.5 && this.machNumber < 20) {
+					var throttleFactor = throttle / 50;
+					//TODO
+					var cantFactor = 0.0;
+					dragPreservation += throttleFactor * cantFactor;
+					dragCoefficient *= dragPreservation;
+				}
+			}
+
+			return Math.abs(dragCoefficient);
+		}
+	}, {
+		key: 'formLiftCoefficient',
+		value: function formLiftCoefficient() {
+			var baseCD = this.getBaseCd(0.6);
+			var alpha = this.getAlpha();
+
+			return baseCD * Math.sin(alpha * 2.0);
+		}
+	}, {
+		key: 'exposedSurfaceArea',
+		value: function exposedSurfaceArea() {
+
+			return 2 * Math.PI * (this.width / 2) * this.height + crossSectionArea();
+		}
+	}, {
+		key: 'crossSectionArea',
+		value: function crossSectionArea() {
+			return Math.PI * Math.pow(this.width / 2, 2);
+		}
+	}, {
+		key: 'liftingSurfaceArea',
+		value: function liftingSurfaceArea() {
+			return this.width * this.height;
+		}
+	}]);
+
 	return Falcon9S1;
 }(_SpaceCraftBase3.default);
 
@@ -783,6 +1004,16 @@ exports.default = Falcon9S1;
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+
+var _createClass = function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+	};
+}();
 
 var _Vector = require('objects/math/Vector2');
 
@@ -835,6 +1066,45 @@ var Falcon9S2 = function (_SpaceCraftBase) {
 
 		return _this;
 	}
+
+	_createClass(Falcon9S2, [{
+		key: 'formDragCoefficient',
+		value: function formDragCoefficient() {
+			var baseCD = this.getBaseCd(0.5);
+			var alpha = this.getAlpha();
+
+			return Math.abs(baseCD * Math.cos(alpha));
+		}
+	}, {
+		key: 'formLiftCoefficient',
+		value: function formLiftCoefficient() {
+			var baseCD = this.getBaseCd(0.6);
+			var alpha = this.getAlpha();
+
+			return baseCD * Math.sin(alpha * 2.0);
+		}
+	}, {
+		key: 'exposedSurfaceArea',
+		value: function exposedSurfaceArea() {
+
+			return 2 * Math.PI * (this.width / 2) * this.height + this.frontalArea();
+		}
+	}, {
+		key: 'frontalArea',
+		value: function frontalArea() {
+			return Math.PI * Math.pow(this.width / 2, 2);
+		}
+	}, {
+		key: 'liftingSurfaceArea',
+		value: function liftingSurfaceArea() {
+			return this.width * this.height;
+		}
+	}, {
+		key: 'dryMass',
+		value: function dryMass() {
+			return 4000;
+		}
+	}]);
 
 	return Falcon9S2;
 }(_SpaceCraftBase3.default);
@@ -889,6 +1159,7 @@ var SpaceCraftBase = function () {
 
 		this.mass = 0;
 		this.gravitationaParent = null;
+		this.heatingRate = 0.0;
 
 		this.accelerationG = _Vector2.default.zero();
 		this.accelerationD = _Vector2.default.zero();
@@ -906,6 +1177,8 @@ var SpaceCraftBase = function () {
 
 		this.width = width;
 		this.height = height;
+
+		this.throttle = 0;
 
 		this._stageOffset = stageOffset;
 		this.onGround = true;
@@ -1118,6 +1391,11 @@ var SpaceCraftBase = function () {
 			return totalHeight;
 		}
 	}, {
+		key: 'stagingForce',
+		value: function stagingForce() {
+			return this.mass * .02;
+		}
+	}, {
 		key: 'resolveGrav',
 		value: function resolveGrav(earth) {
 
@@ -1185,13 +1463,320 @@ var SpaceCraftBase = function () {
 					//M*sec
 					var speed = relativeVelocity.length();
 
-					var HeatingRate = 1.83e-4 * Math.Pow(speed, 3) * Math.Sqrt(atmoDensity / (this.width * 0.5));
+					this.heatingRate = 1.83e-4 * Math.Pow(speed, 3) * Math.Sqrt(atmoDensity / (this.width * 0.5));
 
-					//totalFormDragCoefficient();
-					//totalSkinFrictionCoefficient();
-					//totalLiftCoefficient();
+					var formDragCoefficient = this.totalFormDragCoefficient();
+					var skinFrictionCoefficient = this.totalSkinFrictionCoefficient();
+					var _liftCoefficient = this.totalLiftCoefficient();
+
+					var formDragTerm = formDragCoefficient * this.totalFormDragArea();
+					var skinFrictionTerm = skinFrictionCoefficient * this.totalSkinFrictionArea();
+
+					var dragTerm = formDragTerm;
+					dragTerm += skinFrictionTerm;
+
+					var liftTerm = _liftCoefficient * totalLiftArea();
+
+					relativeVelocity.normalize();
+
+					var drag = relativeVelocity.clone();
+					var dragVTerm = .5 * atmoDensity * velocityMagnitude * dragTerm;
+
+					drag.multiply(dragVTerm);
+
+					var lift = relativeVelocity.clone();
+					var liftVTerm = .5 * atmoDensity * velocityMagnitude * dragTerm;
+
+					lift.multiply(dragVTerm);
 				}
 			}
+		}
+	}, {
+		key: 'totalFormDragCoefficient',
+		value: function totalFormDragCoefficient() {
+			var dragCoefficient = 0;
+
+			if (this.aeroDynamicProperties == "ExposedToAirFlow" || this.aeroDynamicProperties == "ExtendsFineness") {
+				dragCoefficient = this.formDragCoefficient();
+			}
+
+			return this._getChildDragCoefficient(this.children, dragCoefficient);
+		}
+	}, {
+		key: '_getChildDragCoefficient',
+		value: function _getChildDragCoefficient(children, dragCoefficient) {
+			var _iteratorNormalCompletion5 = true;
+			var _didIteratorError5 = false;
+			var _iteratorError5 = undefined;
+
+			try {
+
+				for (var _iterator5 = children[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+					var child = _step5.value;
+
+					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+						if (child.formDragCoefficient() > dragCoefficient) dragCoefficient = child.formDragCoefficient();
+					} else if (child.aeroDynamicProperties = "ExtendsFineness") {
+
+						dragCoefficient *= child.formDragCoefficient();
+					} else if (child.aeroDynamicProperties = "ExtendsCrossSection") {
+
+						dragCoefficient = (dragCoefficient + child.formDragCoefficient()) / 2;
+					}
+
+					dragCoefficient = this._getChildDragCoefficient(child.children, dragCoefficient);
+				}
+			} catch (err) {
+				_didIteratorError5 = true;
+				_iteratorError5 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion5 && _iterator5.return) {
+						_iterator5.return();
+					}
+				} finally {
+					if (_didIteratorError5) {
+						throw _iteratorError5;
+					}
+				}
+			}
+
+			return dragCoefficient;
+		}
+	}, {
+		key: 'totalFormDragArea',
+		value: function totalFormDragArea() {
+			var totalFormDragArea = 0;
+
+			if (this.aeroDynamicProperties == "ExposedToAirFlow" || this.aeroDynamicProperties == "ExtendsFineness") {
+				totalFormDragArea = this.frontalArea();
+			}
+
+			return this._getChildDragCoefficient(this.children, totalFormDragArea);
+		}
+	}, {
+		key: '_getChildFormDragArea',
+		value: function _getChildFormDragArea(children, totalFormDragArea) {
+			var _iteratorNormalCompletion6 = true;
+			var _didIteratorError6 = false;
+			var _iteratorError6 = undefined;
+
+			try {
+
+				for (var _iterator6 = children[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+					var child = _step6.value;
+
+					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+						if (child.frontalArea() > totalFormDragArea) totalFormDragArea = child.frontalArea();
+					} else if (child.aeroDynamicProperties = "ExtendsCrossSection") {
+
+						totalFormDragArea *= child.frontalArea();
+					}
+
+					dragCoefficient = this._getChildFormDragArea(child.children, totalFormDragArea);
+				}
+			} catch (err) {
+				_didIteratorError6 = true;
+				_iteratorError6 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion6 && _iterator6.return) {
+						_iterator6.return();
+					}
+				} finally {
+					if (_didIteratorError6) {
+						throw _iteratorError6;
+					}
+				}
+			}
+
+			return totalFormDragArea;
+		}
+	}, {
+		key: 'skinFrictionCoefficient',
+		value: function skinFrictionCoefficient() {
+
+			var velocity = this.getRelativeVelocity().length();
+			var altitude = this.getRelativeAltitude();
+			var viscosity = this.gravitationaParent.getAtmosphericViscosity(altitude);
+			var reynoldsNumber = velocity * this.height / viscosity;
+			return .455 / Math.pow(Math.log10(reynoldsNumber), 2.58);
+		}
+	}, {
+		key: 'totalSkinFrictionCoefficient',
+		value: function totalSkinFrictionCoefficient() {
+			var skinFrictionCoefficient = 0;
+
+			if (this.aeroDynamicProperties == "ExposedToAirFlow" || this.aeroDynamicProperties == "ExtendsFineness" || this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+				skinFrictionCoefficient = this.skinFrictionCoefficient();
+			}
+
+			var _iteratorNormalCompletion7 = true;
+			var _didIteratorError7 = false;
+			var _iteratorError7 = undefined;
+
+			try {
+				for (var _iterator7 = this.children[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+					var spacecraft = _step7.value;
+
+					skinFrictionCoefficient += spacecraft.totalSkinFrictionCoefficient();
+				}
+			} catch (err) {
+				_didIteratorError7 = true;
+				_iteratorError7 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion7 && _iterator7.return) {
+						_iterator7.return();
+					}
+				} finally {
+					if (_didIteratorError7) {
+						throw _iteratorError7;
+					}
+				}
+			}
+
+			return skinFrictionCoefficient;
+		}
+	}, {
+		key: 'totalSkinFrictionArea',
+		value: function totalSkinFrictionArea() {
+			var totalSkinFrictionArea = 0;
+
+			if (this.aeroDynamicProperties == "ExposedToAirFlow" || this.aeroDynamicProperties == "ExtendsFineness" || this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+				liftCoefficient = this.exposedSurfaceArea();
+			}
+
+			var _iteratorNormalCompletion8 = true;
+			var _didIteratorError8 = false;
+			var _iteratorError8 = undefined;
+
+			try {
+				for (var _iterator8 = this.children[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+					var spacecraft = _step8.value;
+
+					totalSkinFrictionArea += spacecraft.exposedSurfaceArea();
+				}
+			} catch (err) {
+				_didIteratorError8 = true;
+				_iteratorError8 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion8 && _iterator8.return) {
+						_iterator8.return();
+					}
+				} finally {
+					if (_didIteratorError8) {
+						throw _iteratorError8;
+					}
+				}
+			}
+
+			return totalSkinFrictionArea;
+		}
+	}, {
+		key: 'totalLiftCoefficient',
+		value: function totalLiftCoefficient() {
+			var liftCoefficient = 0;
+
+			if (this.aeroDynamicProperties == "ExposedToAirFlow" || this.aeroDynamicProperties == "ExtendsFineness" || this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+				liftCoefficient = this.formLiftCoefficient();
+			}
+
+			return _getMaxChildLiftCoefficient(this.children, liftCoefficient);
+		}
+	}, {
+		key: '_getMaxChildLiftCoefficient',
+		value: function _getMaxChildLiftCoefficient(children, totalLiftCoefficient) {
+			var _iteratorNormalCompletion9 = true;
+			var _didIteratorError9 = false;
+			var _iteratorError9 = undefined;
+
+			try {
+
+				for (var _iterator9 = children[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+					var child = _step9.value;
+
+					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+						if (Math.abs(child.formLiftCoefficient()) > Math.abs(totalLiftCoefficient)) totalLiftCoefficient = child.formLiftCoefficient();
+					} else if (child.aeroDynamicProperties == "ExtendsFineness" || child.aeroDynamicProperties == "ExtendsCrossSection") {
+						totalLiftCoefficient += child.formLiftCoefficient();
+					}
+
+					totalLiftCoefficient = this._getMaxChildLiftCoefficient(child.children, totalLiftCoefficient);
+				}
+			} catch (err) {
+				_didIteratorError9 = true;
+				_iteratorError9 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion9 && _iterator9.return) {
+						_iterator9.return();
+					}
+				} finally {
+					if (_didIteratorError9) {
+						throw _iteratorError9;
+					}
+				}
+			}
+
+			return totalLiftCoefficient;
+		}
+	}, {
+		key: 'totalLiftArea',
+		value: function totalLiftArea() {
+			var totalLiftArea = 0;
+
+			if (this.aeroDynamicProperties == "ExposedToAirFlow" || this.aeroDynamicProperties == "ExtendsFineness" || this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+				totalLiftArea = this.liftingSurfaceArea();
+			}
+
+			return this._getChildLiftArea();
+		}
+	}, {
+		key: '_getChildLiftArea',
+		value: function _getChildLiftArea(children, totalLiftArea) {
+			var _iteratorNormalCompletion10 = true;
+			var _didIteratorError10 = false;
+			var _iteratorError10 = undefined;
+
+			try {
+
+				for (var _iterator10 = children[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+					var child = _step10.value;
+
+					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+						if (child.liftingSurfaceArea() > totalLiftArea) totalLiftArea = child.liftingSurfaceArea();
+					} else if (child.aeroDynamicProperties == "ExtendsFineness" || child.aeroDynamicProperties == "ExtendsCrossSection") {
+						totalLiftArea += child.liftingSurfaceArea();
+					}
+
+					totalLiftArea = this._getChildLiftArea(child.children, liftingSurfaceArea);
+				}
+			} catch (err) {
+				_didIteratorError10 = true;
+				_iteratorError10 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion10 && _iterator10.return) {
+						_iterator10.return();
+					}
+				} finally {
+					if (_didIteratorError10) {
+						throw _iteratorError10;
+					}
+				}
+			}
+
+			return totalLiftArea;
 		}
 	}, {
 		key: 'getBaseCd',
@@ -1204,9 +1789,31 @@ var SpaceCraftBase = function () {
 			return cd;
 		}
 	}, {
-		key: 'getSkinFrictionCoefficient',
-		value: function getSkinFrictionCoefficient() {
-			var velocity = getRelativeAltitude();
+		key: 'getAlpha',
+		value: function getAlpha() {
+			var altitude = this.getRelativeAltitude();
+			var pitch = this.pitch;
+
+			if (altitude > this.gravitationaParent.atmosphereHeight()) {
+
+				return this.pitch - this.gravitationaParent.pitch;
+			}
+
+			var alpha = 0.0;
+			if (altitude > .1) {
+
+				var _alpha = this.pitch - this.getRelativeVelocity().angle();
+
+				while (_alpha > Math.Pi) {
+					_alpha -= Math.Pi * 2;
+				}
+
+				while (_alpha < -Math.Pi) {
+					_alpha += Math.Pi * 2;
+				}
+
+				return _alpha;
+			}
 		}
 	}]);
 

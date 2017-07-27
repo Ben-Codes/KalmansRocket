@@ -25,7 +25,7 @@ class Vector2 {
 	}
 
 	subtract(v) {
-		this.x -=  v.x;
+		this.x -= v.x;
 		this.y -= v.y;
 	}
 
@@ -35,8 +35,15 @@ class Vector2 {
 	}
 
 	divide(v) {
-		this.x /= v.x;
-		this.y /= v.y;
+		if (typeof v === 'object') {
+			this.x /= v.x;
+			this.y /= v.y;
+
+		} else {
+			this.x /= v;
+			this.y /= v;
+
+		}
 	}
 
 	dot(v) {
@@ -54,13 +61,16 @@ class Vector2 {
 		this.y /= len;
 	}
 
-	LengthSquared()
-    {
-        return this.x * this.x + this.y * this.y;
+	LengthSquared() {
+		return this.x * this.x + this.y * this.y;
 	}
 
-	static zero(){
-		return new Vector2(0,0);
+	angle() {
+		return Math.atan2(this.y, this.x);
+	}
+
+	static zero() {
+		return new Vector2(0, 0);
 	}
 
 }

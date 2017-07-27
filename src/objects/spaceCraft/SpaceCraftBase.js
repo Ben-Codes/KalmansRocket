@@ -15,6 +15,7 @@ class SpaceCraftBase {
 
 		this.mass = 0;
 		this.gravitationaParent = null;
+		this.heatingRate = 0.0;
 
 		this.accelerationG = vector2.zero();
 		this.accelerationD = vector2.zero();
@@ -28,10 +29,12 @@ class SpaceCraftBase {
 
 		this.roll = 0.0;
 		this.yaw = 0.0;
-		this.pitch = -Math.PI * 0.5;       
+		this.pitch = -Math.PI * 0.5;
 
 		this.width = width;
 		this.height = height;
+
+		this.throttle = 0;
 
 		this._stageOffset = stageOffset;
 		this.onGround = true;
@@ -83,7 +86,7 @@ class SpaceCraftBase {
 
 
 		for (let spacecraft of this.children) {
-					//debugger;
+			//debugger;
 			spacecraft.updateChildren(this.position, this.velocity);
 		}
 	}
@@ -113,15 +116,15 @@ class SpaceCraftBase {
 
 	}
 
-	resetAccelerations(){
+	resetAccelerations() {
 		this.accelerationG = vector2.zero();
 		this.accelerationD = vector2.zero();
 		this.accelerationN = vector2.zero();
 		this.accelerationL = vector2.zero();
 	}
 
-	getRelativeAltitude(){
-		if(this.gravitationaParent == null)
+	getRelativeAltitude() {
+		if (this.gravitationaParent == null)
 			return 0;
 
 		let diffrence = this.position.clone();
@@ -130,15 +133,15 @@ class SpaceCraftBase {
 		return diffrence.length();
 	}
 
-	getRelativeVelocity(){
-		if(this.gravitationaParent == null)
+	getRelativeVelocity() {
+		if (this.gravitationaParent == null)
 			return vector2.zero;
 
 		let diffrence = this.velocity.clone();
 		return diffrence.subtract(this.gravitationaParent.velocity);
 	}
 
-	getTotalHeight(){
+	getTotalHeight() {
 		let totalHeight = height;
 
 		for (let spacecraft of this.children) {
@@ -148,11 +151,11 @@ class SpaceCraftBase {
 		return totalHeight;
 	}
 
-	_getChildHeight(){
+	_getChildHeight() {
 
 		let totalHeight = 0;
 
-		if(this.aeroDynamicProperties == "ExtendsFineness")
+		if (this.aeroDynamicProperties == "ExtendsFineness")
 			totalHeight += height;
 
 		for (let spacecraft of this.children) {
@@ -162,8 +165,12 @@ class SpaceCraftBase {
 		return totalHeight;
 	}
 
+	stagingForce() {
+		return this.mass * .02;
+	}
 
-	resolveGrav(earth){
+
+	resolveGrav(earth) {
 
 		///gravity
 
@@ -179,7 +186,7 @@ class SpaceCraftBase {
 		let mass_dist_ratio = earth.mass() / r2;
 
 		//to far
-		if(mass_dist_ratio < 2500){
+		if (mass_dist_ratio < 2500) {
 			return
 		}
 
@@ -194,15 +201,15 @@ class SpaceCraftBase {
 		this._resolveAtmo(earth);
 	}
 
-	resolveAtmo(earth){
+	resolveAtmo(earth) {
 		diff_position = earth.position.clone();
 		diff_position.subtract(this.position);
 
 		let heightOffset = 0;
-		if(this.children.length > 0)
-			heightOffset = getTotalHeight() - this.height *.5;
+		if (this.children.length > 0)
+			heightOffset = getTotalHeight() - this.height * .5;
 		else
-			heightOffset = this.height *.5;
+			heightOffset = this.height * .5;
 
 		let distance = diff_position.length() - heightOffset;
 
@@ -210,11 +217,11 @@ class SpaceCraftBase {
 		let altitude = distance - earth.SurfaceRadius;
 
 		//In atmo?
-		if(altitude < earth.atmosphereHeight()){
+		if (altitude < earth.atmosphereHeight()) {
 			let surfaceNormal = new vector2(-diff_position.y, diff_position.x);
 
 			// Distance of circumference at this altitude ( c= 2r * pi )
-			let pathCircumference = 2*Math.PI * distance;
+			let pathCircumference = 2 * Math.PI * distance;
 			let rotationalSpeed = pathCircumference / earth.rotationPeriod();
 
 			//TODO: Ground collision;
@@ -227,16 +234,37 @@ class SpaceCraftBase {
 
 			let velocityMagnitude = relativeVelocity.LengthSquared();
 
-			if(velocityMagnitude > 0){
+			if (velocityMagnitude > 0) {
 
 				//M*sec
 				let speed = relativeVelocity.length();
 
-				let HeatingRate = 1.83e-4 * Math.Pow(speed, 3) * Math.Sqrt(atmoDensity / (this.width * 0.5));
+				this.heatingRate = 1.83e-4 * Math.Pow(speed, 3) * Math.Sqrt(atmoDensity / (this.width * 0.5));
 
-				//totalFormDragCoefficient();
-                //totalSkinFrictionCoefficient();
-				//totalLiftCoefficient();
+				let formDragCoefficient = this.totalFormDragCoefficient();
+				let skinFrictionCoefficient = this.totalSkinFrictionCoefficient();
+				let liftCoefficient = this.totalLiftCoefficient();
+
+				let formDragTerm = formDragCoefficient * this.totalFormDragArea();
+				let skinFrictionTerm = skinFrictionCoefficient * this.totalSkinFrictionArea();
+
+				let dragTerm = formDragTerm;
+				dragTerm += skinFrictionTerm;
+
+				let liftTerm = liftCoefficient * totalLiftArea();
+
+				relativeVelocity.normalize();
+
+				let drag = relativeVelocity.clone();
+				let dragVTerm = .5 * atmoDensity * velocityMagnitude * dragTerm;
+
+				drag.multiply(dragVTerm);
+
+				let lift = relativeVelocity.clone();
+				let liftVTerm = .5 * atmoDensity * velocityMagnitude * dragTerm;
+
+				lift.multiply(dragVTerm);
+
 
 
 			}
@@ -244,8 +272,193 @@ class SpaceCraftBase {
 
 	}
 
-	getBaseCd(cd){
-		if(this.machNumber > 1.0){
+	totalFormDragCoefficient() {
+		let dragCoefficient = 0;
+
+		if (this.aeroDynamicProperties == "ExposedToAirFlow" ||
+			this.aeroDynamicProperties == "ExtendsFineness") {
+			dragCoefficient = this.formDragCoefficient();
+		}
+
+		return this._getChildDragCoefficient(this.children, dragCoefficient);
+	}
+
+	_getChildDragCoefficient(children, dragCoefficient) {
+
+
+		for (let child of children) {
+
+			if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+				if (child.formDragCoefficient() > dragCoefficient)
+					dragCoefficient = child.formDragCoefficient();
+
+			} else if (child.aeroDynamicProperties = "ExtendsFineness") {
+
+				dragCoefficient *= child.formDragCoefficient();
+
+			} else if (child.aeroDynamicProperties = "ExtendsCrossSection") {
+
+				dragCoefficient = (dragCoefficient + child.formDragCoefficient()) / 2;
+			}
+
+			dragCoefficient = this._getChildDragCoefficient(child.children, dragCoefficient);
+		}
+
+
+		return dragCoefficient;
+	}
+
+
+	totalFormDragArea() {
+		let totalFormDragArea = 0;
+
+		if (this.aeroDynamicProperties == "ExposedToAirFlow" ||
+			this.aeroDynamicProperties == "ExtendsFineness") {
+			totalFormDragArea = this.frontalArea();
+		}
+
+		return this._getChildDragCoefficient(this.children, totalFormDragArea);
+	}
+
+	_getChildFormDragArea(children, totalFormDragArea) {
+
+
+		for (let child of children) {
+
+			if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+				if (child.frontalArea() > totalFormDragArea)
+					totalFormDragArea = child.frontalArea();
+
+			} else if (child.aeroDynamicProperties = "ExtendsCrossSection") {
+
+				totalFormDragArea *= child.frontalArea();
+
+			}
+
+			dragCoefficient = this._getChildFormDragArea(child.children, totalFormDragArea);
+		}
+
+
+		return totalFormDragArea;
+	}
+
+
+
+	skinFrictionCoefficient() {
+
+		let velocity = this.getRelativeVelocity().length();
+		let altitude = this.getRelativeAltitude();
+		let viscosity = this.gravitationaParent.getAtmosphericViscosity(altitude);
+		let reynoldsNumber = (velocity * this.height) / viscosity;
+		return .455 / Math.pow(Math.log10(reynoldsNumber), 2.58);
+	}
+
+	totalSkinFrictionCoefficient() {
+		let skinFrictionCoefficient = 0;
+
+		if (this.aeroDynamicProperties == "ExposedToAirFlow" ||
+			this.aeroDynamicProperties == "ExtendsFineness" ||
+			this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+			skinFrictionCoefficient = this.skinFrictionCoefficient();
+		}
+
+		for (let spacecraft of this.children) {
+			skinFrictionCoefficient += spacecraft.totalSkinFrictionCoefficient();
+		}
+
+		return skinFrictionCoefficient;
+	}
+
+	totalSkinFrictionArea() {
+		let totalSkinFrictionArea = 0;
+
+		if (this.aeroDynamicProperties == "ExposedToAirFlow" ||
+			this.aeroDynamicProperties == "ExtendsFineness" ||
+			this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+			liftCoefficient = this.exposedSurfaceArea();
+		}
+
+		for (let spacecraft of this.children) {
+			totalSkinFrictionArea += spacecraft.exposedSurfaceArea();
+		}
+
+		return totalSkinFrictionArea;
+	}
+
+
+	totalLiftCoefficient() {
+		let liftCoefficient = 0;
+
+		if (this.aeroDynamicProperties == "ExposedToAirFlow" ||
+			this.aeroDynamicProperties == "ExtendsFineness" ||
+			this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+			liftCoefficient = this.formLiftCoefficient();
+		}
+
+		return _getMaxChildLiftCoefficient(this.children, liftCoefficient);
+	}
+
+	_getMaxChildLiftCoefficient(children, totalLiftCoefficient) {
+
+		for (let child of children) {
+
+			if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+				if (Math.abs(child.formLiftCoefficient()) > Math.abs(totalLiftCoefficient))
+					totalLiftCoefficient = child.formLiftCoefficient();
+
+			} else if (child.aeroDynamicProperties == "ExtendsFineness" ||
+				child.aeroDynamicProperties == "ExtendsCrossSection") {
+				totalLiftCoefficient += child.formLiftCoefficient();
+			}
+
+
+			totalLiftCoefficient = this._getMaxChildLiftCoefficient(child.children, totalLiftCoefficient);
+		}
+
+		return totalLiftCoefficient;
+	}
+
+	totalLiftArea() {
+		let totalLiftArea = 0;
+
+		if (this.aeroDynamicProperties == "ExposedToAirFlow" ||
+			this.aeroDynamicProperties == "ExtendsFineness" ||
+			this.aeroDynamicProperties == "ExtendsCrossSection") {
+
+			totalLiftArea = this.liftingSurfaceArea();
+		}
+
+		return this._getChildLiftArea();
+	}
+
+	_getChildLiftArea(children, totalLiftArea) {
+
+		for (let child of children) {
+
+			if (child.aeroDynamicProperties == "ExposedToAirFlow") {
+
+				if (child.liftingSurfaceArea() > totalLiftArea)
+					totalLiftArea = child.liftingSurfaceArea();
+
+			} else if (child.aeroDynamicProperties == "ExtendsFineness" ||
+				child.aeroDynamicProperties == "ExtendsCrossSection") {
+				totalLiftArea += child.liftingSurfaceArea();
+			}
+
+			totalLiftArea = this._getChildLiftArea(child.children, liftingSurfaceArea);
+		}
+
+		return totalLiftArea;
+	}
+
+	getBaseCd(cd) {
+		if (this.machNumber > 1.0) {
 			let exp = Math.exp(0.3 / this.machNumber);
 			return cd * 1.4 * exp;
 		}
@@ -253,8 +466,33 @@ class SpaceCraftBase {
 		return cd;
 	}
 
-	getSkinFrictionCoefficient(){
-		let velocity = getRelativeAltitude()
+
+
+	getAlpha() {
+		let altitude = this.getRelativeAltitude();
+		let pitch = this.pitch
+
+		if (altitude > this.gravitationaParent.atmosphereHeight()) {
+
+			return this.pitch - this.gravitationaParent.pitch;
+		}
+
+		let alpha = 0.0;
+		if (altitude > .1) {
+
+			let alpha = this.pitch - this.getRelativeVelocity().angle();
+
+			while (alpha > Math.Pi) {
+				alpha -= Math.Pi * 2;
+			}
+
+			while (alpha < -Math.Pi) {
+				alpha += Math.Pi * 2;
+			}
+
+			return alpha;
+		}
+
 	}
 
 

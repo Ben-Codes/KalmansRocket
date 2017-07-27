@@ -31,6 +31,44 @@ class Fairing extends SpaceCraftBase {
 
 	}
 
+	stagingForce(){
+		return 1500;
+	}
+
+	formDragCoefficient() {
+		let baseCD = this.getBaseCd(0.4);
+		let alpha = this.getAlpha();
+
+		return baseCD * Math.cos(alpha);
+	}
+
+	formLiftCoefficient() {
+		let baseCD = this.getBaseCd(0.6);
+		let alpha = this.getAlpha();
+
+		return baseCD * Math.sin(alpha * 2.0);
+	}
+
+	exposedSurfaceArea() {
+
+		return 2 * Math.PI * (this.width / 2) * this.height + this.frontalArea();
+	}
+
+	frontalArea() {
+
+		return Math.PI * Math.pow(this.width / 2, 2);
+	}
+
+	liftingSurfaceArea() {
+		return this.width * this.height;
+	}
+
+	dryMass(){
+		return 875;
+	}
+
+
+
 }
 
 export default Fairing;

@@ -10,6 +10,8 @@ class Earth {
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new RenderUtils(this._game);
 
+		this.pitch = 0.0;
+
 		//temp
 		this.bmd = game.make.bitmapData(1200, 600);
 		this.bmd.addToWorld();
