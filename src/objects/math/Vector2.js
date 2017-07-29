@@ -20,13 +20,27 @@ class Vector2 {
 	}
 
 	add(v) {
-		this.x += v.x;
-		this.y += v.y;
+
+		if (typeof v === 'object') {
+			this.x += v.x;
+			this.y += v.y;
+
+		} else {
+			this.x += v;
+			this.y += v;
+		}
 	}
 
 	subtract(v) {
-		this.x -= v.x;
-		this.y -= v.y;
+
+		if (typeof v === 'object') {
+			this.x -= v.x;
+			this.y -= v.y;
+
+		} else {
+			this.x -= v;
+			this.y -= v;
+		}
 	}
 
 	multiply(scaler) {
@@ -35,7 +49,7 @@ class Vector2 {
 	}
 
 	divide(v) {
-		
+
 		if (typeof v === 'object') {
 			this.x /= v.x;
 			this.y /= v.y;
@@ -62,7 +76,7 @@ class Vector2 {
 		this.y /= len;
 	}
 
-	LengthSquared() {
+	lengthSquared() {
 		return this.x * this.x + this.y * this.y;
 	}
 

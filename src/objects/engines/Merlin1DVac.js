@@ -12,7 +12,7 @@ class Merlin1DVac extends EngineBase {
 		return new Merlin1DVac(this.parent,this.offset);
 	}
 
-	trust(ispMultiplier){
+	thrust(ispMultiplier){
 		return (845000 + 89000 * ispMultiplier) * this.throttle  * 0.01;
 	}
 

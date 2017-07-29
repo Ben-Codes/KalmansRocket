@@ -67,6 +67,9 @@ class Fairing extends SpaceCraftBase {
 		return 875;
 	}
 
+	name(){
+		return "Fairing";
+	}
 
 
 }

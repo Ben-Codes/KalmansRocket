@@ -1,6 +1,7 @@
 import vector2 from 'objects/math/Vector2';
 import RenderUtils from 'objects/core/RenderUtils';
 import SpaceCraftBase from 'objects/spaceCraft/SpaceCraftBase';
+import Merlin1DVac from 'objects/engines/Merlin1DVac';
 
 class Falcon9S2 extends SpaceCraftBase {
 
@@ -14,6 +15,7 @@ class Falcon9S2 extends SpaceCraftBase {
 
 		this.aeroDynamicProperties = "ExtendsFineness";
 
+		this.engines.push(new Merlin1DVac(this, new vector2(0, this.height * 0.3)));
 	}
 
 	formDragCoefficient() {
@@ -45,6 +47,10 @@ class Falcon9S2 extends SpaceCraftBase {
 
 	dryMass() {
 		return 4000;
+	}
+
+	name(){
+		return "Falcon9S2";
 	}
 
 }

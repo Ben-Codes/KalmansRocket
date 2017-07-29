@@ -41,6 +41,9 @@ class MainState extends Phaser.State {
 		this._startText = text;
 		this._buttonGroup.add(text);
 
+		this.now = 0;
+		this.hasLaunched = false;
+
 		//////////////////////
 		//Zoom
 
@@ -60,9 +63,11 @@ class MainState extends Phaser.State {
 	update() {
 
 		if (this._isStarted) {
-			this.computePhysics();
+			this.tempController();
 		}
-		
+
+		this.computePhysics();
+
 		this.draw();
 	}
 
@@ -70,6 +75,7 @@ class MainState extends Phaser.State {
 
 
 		for (let spacecraft of this._spacecraft) {
+			spacecraft.resetAccelerations();
 			spacecraft.resolveGrav(this._earth);
 		}
 
@@ -78,17 +84,21 @@ class MainState extends Phaser.State {
 		}
 
 		for (let spacecraft of this._spacecraft) {
-			spacecraft.update(0);
+			let secs = this.game.time.physicsElapsed;
+			spacecraft.update(secs);
 		}
 	}
 
 	draw() {
 
+		this._simCamera.update();
+
 		this.game.debug.start(20, 20, 'blue');
 
-		let craftPos = this._spacecraft[0].position
-		this.game.debug.line('Spacecraft Position: X:' + craftPos.x + ' Y:' + craftPos.y);
-		this.game.debug.line('Zoom: ' + this._zoom + ' D ' + this.game.scrollDelta);
+		let craftPos = this._spacecraft[0];
+
+		this.game.debug.line('Spacecraft Position: X:' + craftPos.position.x + ' Y:' + craftPos.position.y);
+		this.game.debug.line('thrust: ' + craftPos.thrust + ' Speed: ' + craftPos.velocity.length());
 
 		let cameraBounds = this._simCamera.getBounds();
 		this._earth.render(cameraBounds);
@@ -143,7 +153,8 @@ class MainState extends Phaser.State {
 	}
 
 	startButtonClicked() {
-		this._isStarted = false;
+
+		this._isStarted = true;
 		this._startText.visible = false;
 		this._startButton.visible = false;
 	}
@@ -154,6 +165,18 @@ class MainState extends Phaser.State {
 			this.scrollDelta -= .5
 		} else {
 			this.scrollDelta += 1.5
+		}
+	}
+
+	tempController() {
+
+
+
+		if (this._isStarted) {
+			this.hasLaunched = true;
+			this._spacecraft[2].tempLaunch();
+			this._isStarted = false;
+
 		}
 	}
 

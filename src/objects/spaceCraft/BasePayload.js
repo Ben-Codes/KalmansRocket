@@ -101,6 +101,10 @@ class BasePayload extends SpaceCraftBase {
 		return 0;
 	}
 
+	name(){
+		return "BasePayload";
+	}
+
 }
 
 export default BasePayload;

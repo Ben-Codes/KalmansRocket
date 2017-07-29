@@ -1,6 +1,7 @@
 import vector2 from 'objects/math/Vector2';
 import RenderUtils from 'objects/core/RenderUtils';
 import SpaceCraftBase from 'objects/spaceCraft/SpaceCraftBase';
+import Merlin1D from 'objects/engines/Merlin1D';
 
 class Falcon9S1 extends SpaceCraftBase {
 
@@ -13,8 +14,15 @@ class Falcon9S1 extends SpaceCraftBase {
 		super(game, position, sprite, 4.11, 47.812188, new vector2(0, 25.55), gravitationalParent, 0, propellantMass);
 
 		this.aeroDynamicProperties = "ExtendsFineness";
-		this._leftFairing = null;
-		this._rightFairing = null;
+
+		for (let i = 0; i < 9; i++) {
+
+			let engineOffsetX = (i - 4.0) / 4.0;
+			let offset = new vector2(engineOffsetX * this.width * 0.3, this.height * 0.45);
+
+			this.engines.push(new Merlin1D(this, offset));
+		}
+
 	}
 
 	formDragCoefficient() {
@@ -41,7 +49,7 @@ class Falcon9S1 extends SpaceCraftBase {
 
 			if (this.throttle > 0 && this.machNumber > 1.5 && this.machNumber < 20) {
 				let throttleFactor = throttle / 50;
-				//TODO
+				//TODO: engine bell drag
 				let cantFactor = 0.0;
 				dragPreservation += throttleFactor * cantFactor;
 				dragCoefficient *= dragPreservation;
@@ -79,6 +87,16 @@ class Falcon9S1 extends SpaceCraftBase {
 		return 22200;
 	}
 
+	tempLaunch(){
+		for (let engine of this.engines) {
+			engine.startup();
+			engine.adjustThrottle(100);
+		};
+	}
+
+	name(){
+		return "Falcon9S1";
+	}
 
 }
 

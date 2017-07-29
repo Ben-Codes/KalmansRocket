@@ -44,7 +44,7 @@ class EngineBase  {
 		this.cant = angle;
 	}
 
-	trust(ispMultiplier){
+	thrust(ispMultiplier){
 		return 0.0;
 	}
 

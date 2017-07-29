@@ -37,7 +37,7 @@ class Earth {
 		return -7.2722052166e-5;
 	}
 
-	rotationPeriod(){
+	rotationPeriod() {
 		return 86400;
 	}
 
@@ -79,6 +79,13 @@ class Earth {
 		return -5.37e-10 * altitude + 1.458e-5;
 	}
 
+	getIspMultiplier(altitude) {
+
+		let heightRatio = Math.max(altitude / this.atmosphereHeight(), 0);
+
+		return 1.0 - Math.exp(-21.3921 * heightRatio);
+	}
+
 	render(cameraBounds) {
 
 		let ellipse = this._renderUtils.computeEllipseSize(this.position, cameraBounds, this.surfaceRadius());
@@ -86,21 +93,20 @@ class Earth {
 
 		///Render the atmo
 		//////////
-		let grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - (ellipse.height*.0000938), ellipse.x, ellipse.y,
-			atmoEllipse.height);
-		grd.addColorStop(0, '#009900');
-		grd.addColorStop(0.005, '#0182b7');
-		grd.addColorStop(0.4, '#4db6ff');
-		grd.addColorStop(1, '#000000');
-		
-		this.bmd.cls();
-		this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
+		//let grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - (ellipse.height * .0000938), ellipse.x, ellipse.y,
+		//	atmoEllipse.height);
+		//grd.addColorStop(0, '#009900');
+		//grd.addColorStop(0.005, '#0182b7');
+		//grd.addColorStop(0.4, '#4db6ff');
+		//grd.addColorStop(1, '#000000');
+
+		//this.bmd.cls();
+		//this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
 
 
 		//////
 		//Render the surface
 		//Get dimensions of ellipse base on window size
-		this._game.game.debug.line('Earth Ellipse: X:' + ellipse.x + ' Y:' + ellipse.y + ' height:' + ellipse.height + ' width:' + ellipse.width);
 
 		this._earthGraphics.clear()
 		this._earthGraphics.beginFill(0x009900);

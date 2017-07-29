@@ -18,8 +18,8 @@ class Camera {
 
 	update(deltaTime) {
 		let targetPosition = this._target.position;
-		this._position.x(targetPosition.x());
-		this._position.y(targetPosition.y());
+		this._position.x = targetPosition.x;
+		this._position.y = targetPosition.y;
 	}
 
 	getBounds() {

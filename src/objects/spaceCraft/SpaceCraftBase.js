@@ -45,6 +45,10 @@ class SpaceCraftBase {
 		this.aeroDynamicProperties = "None";
 		this._groundInterations = 0;
 
+		this.engines = [];
+		this.ispMultiplier = 0.0;
+		this.thrust = 0.0;
+
 		this._renderUtils = new RenderUtils(this._game);
 
 	}
@@ -58,8 +62,37 @@ class SpaceCraftBase {
 	}
 
 	update(deltaTime) {
+					
+		let altitudeFromCenter = this.getRelativeAltitude();
+		this.ispMultiplier = this.gravitationaParent.getIspMultiplier(altitudeFromCenter);
 
 		if (this.parent == null) {
+
+			this.updateEngines(deltaTime);
+
+			if( this.thrust > 0){
+				
+				let trustvector = new vector2(Math.cos(this.pitch), Math.sin(this.pitch));
+
+				trustvector.multiply(this.thrust);
+				trustvector.divide(this.mass());
+				this.accelerationN.add(trustvector);
+			}
+			
+			this.accelerationG.multiply(deltaTime);
+			this.accelerationD.multiply(deltaTime);
+			this.accelerationN.multiply(deltaTime);
+			this.accelerationL.multiply(deltaTime);
+
+			this.velocity.add(this.accelerationG);
+			this.velocity.add(this.accelerationD);
+			this.velocity.add(this.accelerationN);
+			this.velocity.add(this.accelerationL);
+
+			let tempVelocity = this.velocity.clone();
+			tempVelocity.multiply(deltaTime);
+
+			this.position.add(tempVelocity);
 
 			for (let spacecraft of this.children) {
 				spacecraft.updateChildren(this.position, this.velocity);
@@ -84,18 +117,32 @@ class SpaceCraftBase {
 		this.velocity.x = velocity.x;
 		this.velocity.y = velocity.y;
 
-
-
 		for (let spacecraft of this.children) {
-			//debugger;
 			spacecraft.updateChildren(this.position, this.velocity);
 		}
 	}
 
-	render(cameraBounds) {
+	updateEngines(deltaTime) {
 
-		if (this.position == null)
-			debugger;
+		this.thrust = 0;
+
+		if (this.engines.length > 0 && this.propellantMass > 0) {
+
+			for (let engine of this.engines) {
+				if (!engine.isActive) continue;
+				this.thrust += engine.thrust(this.ispMultiplier);
+				this.propellantMass = Math.max(0, this.propellantMass - engine.massFlowRate(this.ispMultiplier) * deltaTime);
+
+			}
+		}
+
+		for (let spacecraft of this.children) {
+			spacecraft.updateEngines(deltaTime);
+			this.thrust += spacecraft.thrust;
+		}
+	}
+
+	render(cameraBounds) {
 
 		//Todo: Check if ship is in viewport, save render time
 		let boundingBox = this._renderUtils.computeBoundingBox(this.position, cameraBounds, this.width, this.height);
@@ -103,7 +150,7 @@ class SpaceCraftBase {
 		//RenderBelow
 
 		//RenderShip
-		//debugger;
+
 		this._sprite.position.x = boundingBox.x;
 		this._sprite.position.y = boundingBox.y;
 
@@ -125,9 +172,11 @@ class SpaceCraftBase {
 	}
 
 	getRelativeAltitude() {
+
 		if (this.gravitationaParent == null)
 			return 0;
-
+		if(this.position == undefined)
+			debugger;
 		let diffrence = this.position.clone();
 		diffrence.subtract(this.gravitationaParent.position);
 
@@ -169,7 +218,7 @@ class SpaceCraftBase {
 	}
 
 	stagingForce() {
-		return this.mass * .02;
+		return this.mass() * .02;
 	}
 
 
@@ -185,7 +234,7 @@ class SpaceCraftBase {
 		let diff_position = earth.position.clone();
 		diff_position.subtract(this.position);
 
-		let r2 = diff_position.LengthSquared();
+		let r2 = diff_position.lengthSquared();
 		let mass_dist_ratio = earth.mass() / r2;
 
 		//to far
@@ -235,15 +284,9 @@ class SpaceCraftBase {
 
 			//TODO: Review and perhaps implement a beter version
 
-			if (altitude <= 0.0001) {
-				this._groundInterations = Math.min(this._groundInterations + 1, 10);
 
-			} else {
-				this._groundInterations = Math.max(this._groundInterations - 1, 0);
-			}
 
-			if (this._groundInterations > 5) {
-				this.onGround = true;
+			if (this.onGround && this.thrust == 0) {
 
 				let normal = new vector2(-diff_position.x, -diff_position.y);
 
@@ -252,7 +295,8 @@ class SpaceCraftBase {
 				let normalMul = normal.clone();
 				normalMul.multiply(circumferenceTerm);
 
-				this.position = earthPosition.add(normalMul);
+				earthPosition.add(normalMul);
+				this.position = earthPosition;
 
 				this.pitch = normal.angle();
 
@@ -262,6 +306,7 @@ class SpaceCraftBase {
 			} else {
 				this.onGround = false;
 			}
+			
 
 			let atmoDensity = earth.getAtmosphericDensity(altitude);
 
@@ -270,7 +315,7 @@ class SpaceCraftBase {
 			relativeVelocity.multiply(rotationalSpeed);
 
 
-			let velocityMagnitude = relativeVelocity.LengthSquared();
+			let velocityMagnitude = relativeVelocity.lengthSquared();
 
 			if (velocityMagnitude > 0) {
 
@@ -278,7 +323,7 @@ class SpaceCraftBase {
 				let speed = relativeVelocity.length();
 
 				this.heatingRate = 1.83e-4 * Math.pow(speed, 3) * Math.sqrt(atmoDensity / (this.width * 0.5));
-				
+
 				let formDragCoefficient = this.totalFormDragCoefficient();
 				let skinFrictionCoefficient = this.totalSkinFrictionCoefficient();
 				let liftCoefficient = this.totalLiftCoefficient();
@@ -313,7 +358,7 @@ class SpaceCraftBase {
 				let halfPI = Math.PI / 2;
 				let isRetro = alpha > halfPI || alpha < -halfPI;
 
-				
+
 				this.accelerationL.x += accelerationLift.y;
 				this.accelerationL.y -= accelerationLift.x;
 
@@ -551,7 +596,7 @@ class SpaceCraftBase {
 		return alpha;
 	}
 
-	mass(){
+	mass() {
 
 		let childMass = 0;
 		for (let child of this.children) {
@@ -559,6 +604,17 @@ class SpaceCraftBase {
 		}
 
 		return childMass + this.dryMass() + this.propellantMass;
+	}
+
+	setThrottle(throttle){
+
+		for (let engine of this.engines) {
+			engine.adjustThrottle(throttle);
+		};
+	}
+
+	name(){
+		return "";
 	}
 
 
