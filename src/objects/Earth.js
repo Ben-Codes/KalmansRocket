@@ -6,6 +6,7 @@ class Earth {
 	constructor(game) {
 		this._game = game;
 		this.position = vector2.zero();
+		this.velocity = vector2.zero();
 
 		this._earthGraphics = game.add.graphics(0, 0);
 		this._renderUtils = new RenderUtils(this._game);
@@ -42,7 +43,7 @@ class Earth {
 
 	// https://www.grc.nasa.gov/www/k-12/rocket/atmos.html
 	getAtmosphericDensity(altitude) {
-		if (altitude > atmosphereHeight()) return 0;
+		if (altitude > this.atmosphereHeight()) return 0;
 
 		let tempurature = .0;
 		let pressure = .0;
@@ -50,17 +51,17 @@ class Earth {
 		if (altitude > 25098.756) {
 
 			tempurature = -205.05 + 0.0053805776 * altitude;
-			pressure = 51.97 * Math.Pow((tempurature + 459.7) / 389.98, -11.388);
+			pressure = 51.97 * Math.pow((tempurature + 459.7) / 389.98, -11.388);
 
 		} else if (altitude > 11019.13) {
 
 			tempurature = -70;
-			pressure = 473.1 * Math.Exp(1.73 - 0.00015748032 * altitude);
+			pressure = 473.1 * Math.exp(1.73 - 0.00015748032 * altitude);
 
 		} else {
 
 			tempurature = 59 - 0.0116797904 * altitude;
-			pressure = 2116 * Math.Pow((tempurature + 459.7) / 518.6, 5.256);
+			pressure = 2116 * Math.pow((tempurature + 459.7) / 518.6, 5.256);
 
 		}
 
@@ -71,7 +72,7 @@ class Earth {
 
 	//http://www.mhtl.uwaterloo.ca/old/onlinetools/airprop/airprop.html
 	getAtmosphericViscosity(altitude) {
-		if (altitude > atmosphereHeight()) return 0;
+		if (altitude > this.atmosphereHeight()) return 0;
 
 		if (altitude > 10668) return 0.0000089213;
 

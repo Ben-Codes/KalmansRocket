@@ -3,7 +3,7 @@ import RenderUtils from 'objects/core/RenderUtils';
 
 class SpaceCraftBase {
 
-	constructor(game, position, sprite, width, height, stageOffset) {
+	constructor(game, position, sprite, width, height, stageOffset, gravitationalParent, payloadMass, propellantMass) {
 
 
 		this._sprite = sprite;
@@ -13,8 +13,8 @@ class SpaceCraftBase {
 		this.position = position;
 		this.velocity = vector2.zero();
 
-		this.mass = 0;
-		this.gravitationaParent = null;
+		this.propellantMass = propellantMass;
+		this.gravitationaParent = gravitationalParent;
 		this.heatingRate = 0.0;
 
 		this.accelerationG = vector2.zero();
@@ -43,6 +43,7 @@ class SpaceCraftBase {
 		this.children = [];
 
 		this.aeroDynamicProperties = "None";
+		this._groundInterations = 0;
 
 		this._renderUtils = new RenderUtils(this._game);
 
@@ -134,15 +135,17 @@ class SpaceCraftBase {
 	}
 
 	getRelativeVelocity() {
+
 		if (this.gravitationaParent == null)
 			return vector2.zero;
 
 		let diffrence = this.velocity.clone();
+
 		return diffrence.subtract(this.gravitationaParent.velocity);
 	}
 
 	getTotalHeight() {
-		let totalHeight = height;
+		let totalHeight = this.height;
 
 		for (let spacecraft of this.children) {
 			totalHeight += spacecraft._getChildHeight();
@@ -156,7 +159,7 @@ class SpaceCraftBase {
 		let totalHeight = 0;
 
 		if (this.aeroDynamicProperties == "ExtendsFineness")
-			totalHeight += height;
+			totalHeight += this.height;
 
 		for (let spacecraft of this.children) {
 			spacecraft._getChildHeight();
@@ -198,23 +201,28 @@ class SpaceCraftBase {
 		diff_position.multiply(mass_dist_ratio);
 		this.accelerationG.add(diff_position);
 
-		this._resolveAtmo(earth);
 	}
 
 	resolveAtmo(earth) {
-		diff_position = earth.position.clone();
+
+		if (this.parent != null)
+			return;
+
+		this.gravitationaParent = earth;
+
+		let diff_position = earth.position.clone();
 		diff_position.subtract(this.position);
 
 		let heightOffset = 0;
 		if (this.children.length > 0)
-			heightOffset = getTotalHeight() - this.height * .5;
+			heightOffset = this.getTotalHeight() - this.height * .5;
 		else
 			heightOffset = this.height * .5;
 
 		let distance = diff_position.length() - heightOffset;
 
 		diff_position.normalize();
-		let altitude = distance - earth.SurfaceRadius;
+		let altitude = distance - earth.surfaceRadius();
 
 		//In atmo?
 		if (altitude < earth.atmosphereHeight()) {
@@ -224,13 +232,43 @@ class SpaceCraftBase {
 			let pathCircumference = 2 * Math.PI * distance;
 			let rotationalSpeed = pathCircumference / earth.rotationPeriod();
 
-			//TODO: Ground collision;
+
+			//TODO: Review and perhaps implement a beter version
+
+			if (altitude <= 0.0001) {
+				this._groundInterations = Math.min(this._groundInterations + 1, 10);
+
+			} else {
+				this._groundInterations = Math.max(this._groundInterations - 1, 0);
+			}
+
+			if (this._groundInterations > 5) {
+				this.onGround = true;
+
+				let normal = new vector2(-diff_position.x, -diff_position.y);
+
+				let earthPosition = earth.position.clone();
+				let circumferenceTerm = earth.surfaceRadius() + heightOffset;
+				let normalMul = normal.clone();
+				normalMul.multiply(circumferenceTerm);
+
+				this.position = earthPosition.add(normalMul);
+
+				this.pitch = normal.angle();
+
+				this.accelerationN.x = -this.accelerationG.x;
+				this.accelerationN.y = -this.accelerationG.y;
+
+			} else {
+				this.onGround = false;
+			}
 
 			let atmoDensity = earth.getAtmosphericDensity(altitude);
 
 			let relativeVelocity = earth.velocity.clone();
 			relativeVelocity.add(surfaceNormal);
 			relativeVelocity.multiply(rotationalSpeed);
+
 
 			let velocityMagnitude = relativeVelocity.LengthSquared();
 
@@ -239,8 +277,8 @@ class SpaceCraftBase {
 				//M*sec
 				let speed = relativeVelocity.length();
 
-				this.heatingRate = 1.83e-4 * Math.Pow(speed, 3) * Math.Sqrt(atmoDensity / (this.width * 0.5));
-
+				this.heatingRate = 1.83e-4 * Math.pow(speed, 3) * Math.sqrt(atmoDensity / (this.width * 0.5));
+				
 				let formDragCoefficient = this.totalFormDragCoefficient();
 				let skinFrictionCoefficient = this.totalSkinFrictionCoefficient();
 				let liftCoefficient = this.totalLiftCoefficient();
@@ -251,7 +289,8 @@ class SpaceCraftBase {
 				let dragTerm = formDragTerm;
 				dragTerm += skinFrictionTerm;
 
-				let liftTerm = liftCoefficient * totalLiftArea();
+
+				let liftTerm = liftCoefficient * this.totalLiftArea();
 
 				relativeVelocity.normalize();
 
@@ -261,13 +300,26 @@ class SpaceCraftBase {
 				drag.multiply(dragVTerm);
 
 				let lift = relativeVelocity.clone();
-				let liftVTerm = .5 * atmoDensity * velocityMagnitude * dragTerm;
+				let liftVTerm = .5 * atmoDensity * velocityMagnitude * liftTerm;
 
-				lift.multiply(dragVTerm);
+				lift.multiply(liftVTerm);
+				drag.divide(this.mass())
+				lift.divide(this.mass())
 
+				this.accelerationD = drag;
+				let accelerationLift = lift;
 
+				let alpha = this.getAlpha();
+				let halfPI = Math.PI / 2;
+				let isRetro = alpha > halfPI || alpha < -halfPI;
+
+				
+				this.accelerationL.x += accelerationLift.y;
+				this.accelerationL.y -= accelerationLift.x;
 
 			}
+		} else {
+			this.heatingRate = 0;
 		}
 
 	}
@@ -348,7 +400,11 @@ class SpaceCraftBase {
 
 	skinFrictionCoefficient() {
 
-		let velocity = this.getRelativeVelocity().length();
+		let velocity = this.getRelativeVelocity();
+		//TODO: Remove
+		if (velocity == null)
+			return 0.0
+		velocity = velocity.length();
 		let altitude = this.getRelativeAltitude();
 		let viscosity = this.gravitationaParent.getAtmosphericViscosity(altitude);
 		let reynoldsNumber = (velocity * this.height) / viscosity;
@@ -379,7 +435,7 @@ class SpaceCraftBase {
 			this.aeroDynamicProperties == "ExtendsFineness" ||
 			this.aeroDynamicProperties == "ExtendsCrossSection") {
 
-			liftCoefficient = this.exposedSurfaceArea();
+			totalSkinFrictionArea = this.exposedSurfaceArea();
 		}
 
 		for (let spacecraft of this.children) {
@@ -400,7 +456,7 @@ class SpaceCraftBase {
 			liftCoefficient = this.formLiftCoefficient();
 		}
 
-		return _getMaxChildLiftCoefficient(this.children, liftCoefficient);
+		return this._getMaxChildLiftCoefficient(this.children, liftCoefficient);
 	}
 
 	_getMaxChildLiftCoefficient(children, totalLiftCoefficient) {
@@ -434,7 +490,7 @@ class SpaceCraftBase {
 			totalLiftArea = this.liftingSurfaceArea();
 		}
 
-		return this._getChildLiftArea();
+		return this._getChildLiftArea(this.children, totalLiftArea);
 	}
 
 	_getChildLiftArea(children, totalLiftArea) {
@@ -451,7 +507,7 @@ class SpaceCraftBase {
 				totalLiftArea += child.liftingSurfaceArea();
 			}
 
-			totalLiftArea = this._getChildLiftArea(child.children, liftingSurfaceArea);
+			totalLiftArea = this._getChildLiftArea(child.children, totalLiftArea);
 		}
 
 		return totalLiftArea;
@@ -469,6 +525,7 @@ class SpaceCraftBase {
 
 
 	getAlpha() {
+
 		let altitude = this.getRelativeAltitude();
 		let pitch = this.pitch
 
@@ -489,10 +546,19 @@ class SpaceCraftBase {
 			while (alpha < -Math.Pi) {
 				alpha += Math.Pi * 2;
 			}
-
-			return alpha;
 		}
 
+		return alpha;
+	}
+
+	mass(){
+
+		let childMass = 0;
+		for (let child of this.children) {
+			childMass += child.mass();
+		}
+
+		return childMass + this.dryMass() + this.propellantMass;
 	}
 
 

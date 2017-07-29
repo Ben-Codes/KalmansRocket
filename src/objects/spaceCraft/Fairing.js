@@ -4,7 +4,7 @@ import SpaceCraftBase from 'objects/spaceCraft/SpaceCraftBase';
 
 class Fairing extends SpaceCraftBase {
 
-	constructor(game, position, isLeft) {
+	constructor(game, position, isLeft, gravitationalParent) {
 
 
 		let offset = new vector2(0, 0);
@@ -24,7 +24,7 @@ class Fairing extends SpaceCraftBase {
 		sprite.anchor.setTo(.5, .5);
 
 		//Width: 2.59 meters Height 13.0 meters
-		super(game, position, sprite, 2.59, 13.0, offset);
+		super(game, position, sprite, 2.59, 13.0, offset, gravitationalParent, 0, 0);
 
 		this._isLeft = isLeft;
 		this.aeroDynamicProperties = "ExposedToAirFlow";

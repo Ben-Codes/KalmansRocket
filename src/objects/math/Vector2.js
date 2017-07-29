@@ -35,6 +35,7 @@ class Vector2 {
 	}
 
 	divide(v) {
+		
 		if (typeof v === 'object') {
 			this.x /= v.x;
 			this.y /= v.y;
@@ -56,7 +57,7 @@ class Vector2 {
 
 	normalize() {
 
-		let len = length();
+		let len = this.length();
 		this.x /= len;
 		this.y /= len;
 	}

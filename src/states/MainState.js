@@ -62,14 +62,22 @@ class MainState extends Phaser.State {
 		if (this._isStarted) {
 			this.computePhysics();
 		}
-
+		
 		this.draw();
 	}
 
 	computePhysics() {
 
-		for (let spacecraft of this._spacecraft) {
 
+		for (let spacecraft of this._spacecraft) {
+			spacecraft.resolveGrav(this._earth);
+		}
+
+		for (let spacecraft of this._spacecraft) {
+			spacecraft.resolveAtmo(this._earth);
+		}
+
+		for (let spacecraft of this._spacecraft) {
 			spacecraft.update(0);
 		}
 	}
@@ -112,18 +120,18 @@ class MainState extends Phaser.State {
 		let position = new vector2(0, -this._earth.surfaceRadius());
 		position.add(this._earth.position);
 
-		let payload = new BasePayload(this, position);
+		let payload = new BasePayload(this, position, this._earth, 3136);
 
 		let zero = new vector2(0, 0);
 
-		let leftFairing = new Fairing(this, zero.clone(), true);
-		let rightFairing = new Fairing(this, zero.clone(), false);
+		let leftFairing = new Fairing(this, zero.clone(), true, this._earth);
+		let rightFairing = new Fairing(this, zero.clone(), false, this._earth);
 
 		payload.addFairings(leftFairing, rightFairing);
 
 
-		let f9s2 = new Falcon9S2(this, zero.clone());
-		let f9s1 = new Falcon9S1(this, zero.clone());
+		let f9s2 = new Falcon9S2(this, zero.clone(), this._earth);
+		let f9s1 = new Falcon9S1(this, zero.clone(), this._earth);
 
 		payload.addChild(f9s2);
 		f9s2.setParent(payload);

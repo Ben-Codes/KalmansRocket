@@ -4,13 +4,13 @@ import SpaceCraftBase from 'objects/spaceCraft/SpaceCraftBase';
 
 class BasePayload extends SpaceCraftBase {
 
-	constructor(game, position) {
+	constructor(game, position, gravitationalParent, payloadMass) {
 
 		let sprite = game.add.sprite(-9999, -9999, 'BasePayload');
 		sprite.anchor.setTo(.5, .5);
 
 		//Width: 4 meters Height 8.52 meters
-		super(game, position, sprite, 4, 8.52, new vector2(0, 0));
+		super(game, position, sprite, 4, 8.52, new vector2(0, 0), gravitationalParent, payloadMass, 0);
 
 		//TODO: Use enums
 		this.aeroDynamicProperties = "ExposedToAirFlow";
