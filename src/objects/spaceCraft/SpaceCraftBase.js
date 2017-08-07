@@ -1,5 +1,6 @@
 import vector2 from 'objects/math/Vector2';
 import RenderUtils from 'objects/core/RenderUtils';
+import EngineExhaust from 'objects/engines/EngineExhaust';
 
 class SpaceCraftBase {
 
@@ -49,6 +50,11 @@ class SpaceCraftBase {
 		this.ispMultiplier = 0.0;
 		this.thrust = 0.0;
 
+		this._atmoSpeed = 0.0;
+		this._altitude = 0.0;
+
+		//this.engineExhaust = new EngineExhaust(game.game);
+
 		this._renderUtils = new RenderUtils(this._game);
 
 	}
@@ -71,7 +77,7 @@ class SpaceCraftBase {
 			this.updateEngines(deltaTime);
 
 			if( this.thrust > 0){
-				
+
 				let trustvector = new vector2(Math.cos(this.pitch), Math.sin(this.pitch));
 
 				trustvector.multiply(this.thrust);
@@ -133,6 +139,7 @@ class SpaceCraftBase {
 				this.thrust += engine.thrust(this.ispMultiplier);
 				this.propellantMass = Math.max(0, this.propellantMass - engine.massFlowRate(this.ispMultiplier) * deltaTime);
 
+				engine.update(deltaTime,this.ispMultiplier);
 			}
 		}
 
@@ -150,18 +157,25 @@ class SpaceCraftBase {
 		//RenderBelow
 
 		//RenderShip
-
 		this._sprite.position.x = boundingBox.x;
 		this._sprite.position.y = boundingBox.y;
 
 		this._sprite.rotation = this.pitch + Math.PI * 0.5;
-
 		this._sprite.width = boundingBox.width;
 		this._sprite.height = boundingBox.height;
 
+		for (let engine of this.engines) {
+			engine.draw(cameraBounds);
+		}
+	}
 
-		//RenderAbove
+	offsetPitch(offset){
+		
+		this.pitch += offset;
 
+		for (let spacecraft of this.children) {
+			spacecraft.offsetPitch(offset);
+		}
 	}
 
 	resetAccelerations() {
@@ -175,8 +189,7 @@ class SpaceCraftBase {
 
 		if (this.gravitationaParent == null)
 			return 0;
-		if(this.position == undefined)
-			debugger;
+
 		let diffrence = this.position.clone();
 		diffrence.subtract(this.gravitationaParent.position);
 
@@ -273,6 +286,8 @@ class SpaceCraftBase {
 		diff_position.normalize();
 		let altitude = distance - earth.surfaceRadius();
 
+		this._altitude = altitude;
+
 		//In atmo?
 		if (altitude < earth.atmosphereHeight()) {
 			let surfaceNormal = new vector2(-diff_position.y, diff_position.x);
@@ -283,7 +298,6 @@ class SpaceCraftBase {
 
 
 			//TODO: Review and perhaps implement a beter version
-
 
 
 			if (this.onGround && this.thrust == 0) {

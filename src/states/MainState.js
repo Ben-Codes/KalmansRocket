@@ -41,7 +41,13 @@ class MainState extends Phaser.State {
 		this._startText = text;
 		this._buttonGroup.add(text);
 
+		this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
+		this.rightKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
+
+		/////
+
 		this.now = 0;
+		this.timeElapsed = 0;
 		this.hasLaunched = false;
 
 		//////////////////////
@@ -73,7 +79,6 @@ class MainState extends Phaser.State {
 
 	computePhysics() {
 
-
 		for (let spacecraft of this._spacecraft) {
 			spacecraft.resetAccelerations();
 			spacecraft.resolveGrav(this._earth);
@@ -95,10 +100,29 @@ class MainState extends Phaser.State {
 
 		this.game.debug.start(20, 20, 'blue');
 
-		let craftPos = this._spacecraft[0];
+		let craftPos = this._spacecraft[2];
 
-		this.game.debug.line('Spacecraft Position: X:' + craftPos.position.x + ' Y:' + craftPos.position.y);
-		this.game.debug.line('thrust: ' + craftPos.thrust + ' Speed: ' + craftPos.velocity.length());
+
+		this.game.debug.line('Thrust: ' + craftPos.thrust + ' Speed: ' + Math.floor(craftPos.velocity.length()) + ' Altitude: ' + Math.floor(this._spacecraft[0]._altitude * 3.28) + " ft");
+		this.game.debug.line('Mass: ' + Math.floor(craftPos.mass()) + ' PropellantMass: ' + Math.floor(craftPos.propellantMass));
+		this.game.debug.line('Pitch: ' + this._spacecraft[0].pitch);
+		if (this.now) {
+			this.timeElapsed = Math.floor(this.game.time.elapsedSecondsSince(this.now));
+			this.game.debug.line('Elapsed Time: ' + this.timeElapsed);
+		}
+
+
+		if (this.leftKey.isDown) {
+			this.game.debug.line('Left Key Down');
+		} else if (this.rightKey.isDown) {
+			this.game.debug.line('Right Key Down');
+		}
+		if (this.leftKey.isDown) {
+			this._spacecraft[0].offsetPitch(-.01);
+		} else if (this.rightKey.isDown) {
+			this._spacecraft[0].offsetPitch(.01);
+		}
+
 
 		let cameraBounds = this._simCamera.getBounds();
 		this._earth.render(cameraBounds);
@@ -170,14 +194,21 @@ class MainState extends Phaser.State {
 
 	tempController() {
 
-
+		this.turn1 = false;
+		this.turn2 = false;
 
 		if (this._isStarted) {
+
+			this.now = this.game.time.time;
 			this.hasLaunched = true;
 			this._spacecraft[2].tempLaunch();
 			this._isStarted = false;
-
 		}
+
+
+
+
+
 	}
 
 }

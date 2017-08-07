@@ -47,7 +47,7 @@ var Game = function (_Phaser$Game) {
 
 new Game();
 
-},{"states/MainState":15}],2:[function(require,module,exports){
+},{"states/MainState":17}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -185,16 +185,14 @@ var Earth = function () {
 
 			///Render the atmo
 			//////////
-			//let grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - (ellipse.height * .0000938), ellipse.x, ellipse.y,
-			//	atmoEllipse.height);
-			//grd.addColorStop(0, '#009900');
-			//grd.addColorStop(0.005, '#0182b7');
-			//grd.addColorStop(0.4, '#4db6ff');
-			//grd.addColorStop(1, '#000000');
+			var grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - ellipse.height * .0000938, ellipse.x, ellipse.y, atmoEllipse.height);
+			grd.addColorStop(0, '#009900');
+			grd.addColorStop(0.005, '#0182b7');
+			grd.addColorStop(0.4, '#4db6ff');
+			grd.addColorStop(1, '#000000');
 
-			//this.bmd.cls();
-			//this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
-
+			this.bmd.cls();
+			this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
 
 			//////
 			//Render the surface
@@ -215,7 +213,7 @@ var Earth = function () {
 
 exports.default = Earth;
 
-},{"objects/core/RenderUtils":4,"objects/math/Vector2":9}],3:[function(require,module,exports){
+},{"objects/core/RenderUtils":5,"objects/math/Vector2":11}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -292,7 +290,43 @@ var Camera = function () {
 
 exports.default = Camera;
 
-},{"objects/math/RectangleD":8,"objects/math/Vector2":9}],4:[function(require,module,exports){
+},{"objects/math/RectangleD":10,"objects/math/Vector2":11}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+function _interopRequireDefault(obj) {
+	return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
+}
+
+var Particle = function Particle() {
+	_classCallCheck(this, Particle);
+
+	this.isActive = false;
+	this.position = _Vector2.default.zero();
+	this.velocity = _Vector2.default.zero();
+
+	this.age = 0;
+	this.maxAge = 0;
+
+	this.isFlame = false;
+};
+
+exports.default = Particle;
+
+},{"objects/math/Vector2":11}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -376,7 +410,7 @@ var RenderUtils = function () {
 
 exports.default = RenderUtils;
 
-},{"objects/math/RectangleD":8,"objects/math/Vector2":9}],5:[function(require,module,exports){
+},{"objects/math/RectangleD":10,"objects/math/Vector2":11}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -396,6 +430,10 @@ var _createClass = function () {
 var _Vector = require('objects/math/Vector2');
 
 var _Vector2 = _interopRequireDefault(_Vector);
+
+var _EngineExhaust = require('objects/engines/EngineExhaust');
+
+var _EngineExhaust2 = _interopRequireDefault(_EngineExhaust);
 
 function _interopRequireDefault(obj) {
 	return obj && obj.__esModule ? obj : { default: obj };
@@ -420,19 +458,32 @@ var EngineBase = function () {
 		this.throttle = 0.0;
 
 		this.cant = 0.0;
+
+		this._engineExhaust = new _EngineExhaust2.default(this.parent._game.game);
 	}
 
 	_createClass(EngineBase, [{
 		key: 'update',
 		value: function update(deltaTime, ispMultiplier) {
 
-			//TODO: Future Flame Calculations
-			//let rotation = this.parent.pitch - this._offsetRotation;
-			//let offset = new vector2(Math.cos(rotation), Math.sin(rotation));
-			//offset.multiply(this._offsetRotation);
+			if (this._engineExhaust == null) return;
+			var rotation = this.parent.pitch - this._offsetRotation;
+			var offset = new _Vector2.default(Math.cos(rotation), Math.sin(rotation));
+			offset.multiply(this._offsetLength);
 
-			//let throttle = 
+			var throttle = 0;
+			if (this.isActive && this.parent.propellantMass > 0) throttle = this.throttle;
 
+			var position = this.parent.position.clone();
+			position.subtract(offset);
+
+			this._engineExhaust.update(deltaTime, position, this.parent.velocity, this.parent.pitch, throttle, ispMultiplier);
+		}
+	}, {
+		key: 'draw',
+		value: function draw(cameraBounds) {
+
+			this._engineExhaust.draw(cameraBounds);
 		}
 	}, {
 		key: 'startup',
@@ -472,7 +523,226 @@ var EngineBase = function () {
 
 exports.default = EngineBase;
 
-},{"objects/math/Vector2":9}],6:[function(require,module,exports){
+},{"objects/engines/EngineExhaust":7,"objects/math/Vector2":11}],7:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+	};
+}();
+
+var _RectangleD = require('objects/math/RectangleD');
+
+var _RectangleD2 = _interopRequireDefault(_RectangleD);
+
+var _Vector = require('objects/math/Vector2');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+var _Particle = require('objects/core/Particle');
+
+var _Particle2 = _interopRequireDefault(_Particle);
+
+var _RenderUtils = require('objects/core/RenderUtils');
+
+var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+function _interopRequireDefault(obj) {
+	return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
+}
+
+var EngineExhaust = function () {
+	function EngineExhaust(game) {
+		_classCallCheck(this, EngineExhaust);
+
+		this.particles = [];
+		this._availableParticles = [];
+
+		this._graphics = game.add.graphics(0, 0);
+
+		for (var i = 0; i < 500; i++) {
+			var p = new _Particle2.default();
+			this.particles.push(p);
+			this._availableParticles.push(p);
+		}
+
+		this._particleRate = .5; //100
+		this._minSpread = 2;
+		this._maxSpread = .1;
+		this._maxAge = 10;
+		this._currentMax = .1;
+		this._angle = .05;
+
+		this._renderUtil = new _RenderUtils2.default(game);
+	}
+
+	_createClass(EngineExhaust, [{
+		key: 'update',
+		value: function update(deltaTime, enginePosition, shipVelocity, rotation, throttle, ispMultiplier) {
+
+			var partToGenerate = throttle * this._particleRate * deltaTime;
+			var retrograde = rotation + Math.PI + this._angle; // 
+
+			var spreadMultiplier = (1.0 - ispMultiplier) * this._minSpread + ispMultiplier * this._maxSpread;
+
+			for (var i = 0; i < partToGenerate; i++) {
+
+				if (this._availableParticles.length > 0) {
+
+					var velocityFactor = Math.random() * (300 - 200) + 200;
+					var spread = Math.random() - .5;
+
+					var velocity = _Vector2.default.fromAngle(retrograde + spread * spreadMultiplier);
+
+					if (this._currentMax < this._maxAge) this._currentMax += .001;
+
+					var p = this._availableParticles.pop();
+					p.isActive = true;
+					p.age = 0;
+
+					if (Math.random() < .25) {
+						p.maxAge = .1;
+						p.isFlame = true;
+					} else {
+						p.maxAge = Math.random() * .05 + this._currentMax;
+						p.isFlame = false;
+					}
+
+					p.position = enginePosition.clone();
+
+					velocity.multiply(velocityFactor);
+					p.velocity = velocity;
+				}
+			}
+
+			var _iteratorNormalCompletion = true;
+			var _didIteratorError = false;
+			var _iteratorError = undefined;
+
+			try {
+				for (var _iterator = this.particles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+					var _p = _step.value;
+
+					if (_p.isActive) {
+
+						var _velocity = _p.velocity.clone();
+						_velocity.multiply(deltaTime);
+
+						_p.position.add(_velocity);
+						_p.age += deltaTime;
+
+						//if(p.velocity.y < 0)
+						//debugger;
+
+						if (_p.age > _p.maxAge) {
+							_p.isActive = false;
+							this._availableParticles.push(_p);
+						}
+					}
+				}
+			} catch (err) {
+				_didIteratorError = true;
+				_iteratorError = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion && _iterator.return) {
+						_iterator.return();
+					}
+				} finally {
+					if (_didIteratorError) {
+						throw _iteratorError;
+					}
+				}
+			}
+		}
+	}, {
+		key: 'draw',
+		value: function draw(cameraBounds) {
+
+			var particleScale = 4;
+
+			//if(cameraBounds.width < 1000){
+			//particleScale = 1.22e-6 * cameraBounds.width * cameraBounds.width - 4.8e-3 * cameraBounds.width + 4.4;
+			//}
+
+			var halfParticleScale = particleScale * 0.5;
+
+			this._graphics.clear();
+
+			this._graphics.beginFill(0x708c98);
+
+			var _iteratorNormalCompletion2 = true;
+			var _didIteratorError2 = false;
+			var _iteratorError2 = undefined;
+
+			try {
+				for (var _iterator2 = this.particles[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+					var p = _step2.value;
+
+					if (p.isActive) {
+
+						if (cameraBounds.contains(p.position)) {
+
+							if (p.isFlame) {
+								var rand = Math.random();
+								if (rand < .5) {
+									this._graphics.beginFill(0xea2300);
+								} else if (rand < .7) {
+									this._graphics.beginFill(0xff8100);
+								} else if (rand < .9) {
+									this._graphics.beginFill(0xf25500);
+								} else {
+									this._graphics.beginFill(0xd80000);
+								}
+							} else {
+								this._graphics.beginFill(0x708c98);
+							}
+
+							var screencord = this._renderUtil.computeBoundingBox(p.position, cameraBounds);
+							this._graphics.drawRect(screencord.x - halfParticleScale, screencord.y - halfParticleScale, particleScale, particleScale);
+						}
+					}
+				}
+			} catch (err) {
+				_didIteratorError2 = true;
+				_iteratorError2 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion2 && _iterator2.return) {
+						_iterator2.return();
+					}
+				} finally {
+					if (_didIteratorError2) {
+						throw _iteratorError2;
+					}
+				}
+			}
+
+			this._graphics.endFill();
+		}
+	}]);
+
+	return EngineExhaust;
+}();
+
+exports.default = EngineExhaust;
+
+},{"objects/core/Particle":4,"objects/core/RenderUtils":5,"objects/math/RectangleD":10,"objects/math/Vector2":11}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -553,7 +823,7 @@ var Merlin1D = function (_EngineBase) {
 
 exports.default = Merlin1D;
 
-},{"objects/engines/EngineBase":5,"objects/math/Vector2":9}],7:[function(require,module,exports){
+},{"objects/engines/EngineBase":6,"objects/math/Vector2":11}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -634,7 +904,7 @@ var Merlin1DVac = function (_EngineBase) {
 
 exports.default = Merlin1DVac;
 
-},{"objects/engines/EngineBase":5,"objects/math/Vector2":9}],8:[function(require,module,exports){
+},{"objects/engines/EngineBase":6,"objects/math/Vector2":11}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -707,7 +977,7 @@ var rectangleD = function () {
 
 exports.default = rectangleD;
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -835,6 +1105,13 @@ var Vector2 = function () {
 		value: function zero() {
 			return new Vector2(0, 0);
 		}
+	}, {
+		key: 'fromAngle',
+		value: function fromAngle(angle) {
+			var x = Math.cos(angle);
+			var y = Math.sin(angle);
+			return new Vector2(x, y);
+		}
 	}]);
 
 	return Vector2;
@@ -842,7 +1119,7 @@ var Vector2 = function () {
 
 exports.default = Vector2;
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1016,7 +1293,7 @@ var BasePayload = function (_SpaceCraftBase) {
 
 exports.default = BasePayload;
 
-},{"objects/core/RenderUtils":4,"objects/math/Vector2":9,"objects/spaceCraft/SpaceCraftBase":14}],11:[function(require,module,exports){
+},{"objects/core/RenderUtils":5,"objects/math/Vector2":11,"objects/spaceCraft/SpaceCraftBase":16}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1153,7 +1430,7 @@ var Fairing = function (_SpaceCraftBase) {
 
 exports.default = Fairing;
 
-},{"objects/core/RenderUtils":4,"objects/math/Vector2":9,"objects/spaceCraft/SpaceCraftBase":14}],12:[function(require,module,exports){
+},{"objects/core/RenderUtils":5,"objects/math/Vector2":11,"objects/spaceCraft/SpaceCraftBase":16}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1346,7 +1623,7 @@ var Falcon9S1 = function (_SpaceCraftBase) {
 
 exports.default = Falcon9S1;
 
-},{"objects/core/RenderUtils":4,"objects/engines/Merlin1D":6,"objects/math/Vector2":9,"objects/spaceCraft/SpaceCraftBase":14}],13:[function(require,module,exports){
+},{"objects/core/RenderUtils":5,"objects/engines/Merlin1D":8,"objects/math/Vector2":11,"objects/spaceCraft/SpaceCraftBase":16}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1469,7 +1746,7 @@ var Falcon9S2 = function (_SpaceCraftBase) {
 
 exports.default = Falcon9S2;
 
-},{"objects/core/RenderUtils":4,"objects/engines/Merlin1DVac":7,"objects/math/Vector2":9,"objects/spaceCraft/SpaceCraftBase":14}],14:[function(require,module,exports){
+},{"objects/core/RenderUtils":5,"objects/engines/Merlin1DVac":9,"objects/math/Vector2":11,"objects/spaceCraft/SpaceCraftBase":16}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1493,6 +1770,10 @@ var _Vector2 = _interopRequireDefault(_Vector);
 var _RenderUtils = require('objects/core/RenderUtils');
 
 var _RenderUtils2 = _interopRequireDefault(_RenderUtils);
+
+var _EngineExhaust = require('objects/engines/EngineExhaust');
+
+var _EngineExhaust2 = _interopRequireDefault(_EngineExhaust);
 
 function _interopRequireDefault(obj) {
 	return obj && obj.__esModule ? obj : { default: obj };
@@ -1550,6 +1831,11 @@ var SpaceCraftBase = function () {
 		this.engines = [];
 		this.ispMultiplier = 0.0;
 		this.thrust = 0.0;
+
+		this._atmoSpeed = 0.0;
+		this._altitude = 0.0;
+
+		//this.engineExhaust = new EngineExhaust(game.game);
 
 		this._renderUtils = new _RenderUtils2.default(this._game);
 	}
@@ -1684,6 +1970,8 @@ var SpaceCraftBase = function () {
 						if (!engine.isActive) continue;
 						this.thrust += engine.thrust(this.ispMultiplier);
 						this.propellantMass = Math.max(0, this.propellantMass - engine.massFlowRate(this.ispMultiplier) * deltaTime);
+
+						engine.update(deltaTime, this.ispMultiplier);
 					}
 				} catch (err) {
 					_didIteratorError3 = true;
@@ -1737,16 +2025,68 @@ var SpaceCraftBase = function () {
 			//RenderBelow
 
 			//RenderShip
-
 			this._sprite.position.x = boundingBox.x;
 			this._sprite.position.y = boundingBox.y;
 
 			this._sprite.rotation = this.pitch + Math.PI * 0.5;
-
 			this._sprite.width = boundingBox.width;
 			this._sprite.height = boundingBox.height;
 
-			//RenderAbove
+			var _iteratorNormalCompletion5 = true;
+			var _didIteratorError5 = false;
+			var _iteratorError5 = undefined;
+
+			try {
+				for (var _iterator5 = this.engines[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+					var engine = _step5.value;
+
+					engine.draw(cameraBounds);
+				}
+			} catch (err) {
+				_didIteratorError5 = true;
+				_iteratorError5 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion5 && _iterator5.return) {
+						_iterator5.return();
+					}
+				} finally {
+					if (_didIteratorError5) {
+						throw _iteratorError5;
+					}
+				}
+			}
+		}
+	}, {
+		key: 'offsetPitch',
+		value: function offsetPitch(offset) {
+
+			this.pitch += offset;
+
+			var _iteratorNormalCompletion6 = true;
+			var _didIteratorError6 = false;
+			var _iteratorError6 = undefined;
+
+			try {
+				for (var _iterator6 = this.children[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+					var spacecraft = _step6.value;
+
+					spacecraft.offsetPitch(offset);
+				}
+			} catch (err) {
+				_didIteratorError6 = true;
+				_iteratorError6 = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion6 && _iterator6.return) {
+						_iterator6.return();
+					}
+				} finally {
+					if (_didIteratorError6) {
+						throw _iteratorError6;
+					}
+				}
+			}
 		}
 	}, {
 		key: 'resetAccelerations',
@@ -1761,7 +2101,7 @@ var SpaceCraftBase = function () {
 		value: function getRelativeAltitude() {
 
 			if (this.gravitationaParent == null) return 0;
-			if (this.position == undefined) debugger;
+
 			var diffrence = this.position.clone();
 			diffrence.subtract(this.gravitationaParent.position);
 
@@ -1782,27 +2122,27 @@ var SpaceCraftBase = function () {
 		value: function getTotalHeight() {
 			var totalHeight = this.height;
 
-			var _iteratorNormalCompletion5 = true;
-			var _didIteratorError5 = false;
-			var _iteratorError5 = undefined;
+			var _iteratorNormalCompletion7 = true;
+			var _didIteratorError7 = false;
+			var _iteratorError7 = undefined;
 
 			try {
-				for (var _iterator5 = this.children[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-					var spacecraft = _step5.value;
+				for (var _iterator7 = this.children[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+					var spacecraft = _step7.value;
 
 					totalHeight += spacecraft._getChildHeight();
 				}
 			} catch (err) {
-				_didIteratorError5 = true;
-				_iteratorError5 = err;
+				_didIteratorError7 = true;
+				_iteratorError7 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion5 && _iterator5.return) {
-						_iterator5.return();
+					if (!_iteratorNormalCompletion7 && _iterator7.return) {
+						_iterator7.return();
 					}
 				} finally {
-					if (_didIteratorError5) {
-						throw _iteratorError5;
+					if (_didIteratorError7) {
+						throw _iteratorError7;
 					}
 				}
 			}
@@ -1817,27 +2157,27 @@ var SpaceCraftBase = function () {
 
 			if (this.aeroDynamicProperties == "ExtendsFineness") totalHeight += this.height;
 
-			var _iteratorNormalCompletion6 = true;
-			var _didIteratorError6 = false;
-			var _iteratorError6 = undefined;
+			var _iteratorNormalCompletion8 = true;
+			var _didIteratorError8 = false;
+			var _iteratorError8 = undefined;
 
 			try {
-				for (var _iterator6 = this.children[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-					var spacecraft = _step6.value;
+				for (var _iterator8 = this.children[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+					var spacecraft = _step8.value;
 
 					spacecraft._getChildHeight();
 				}
 			} catch (err) {
-				_didIteratorError6 = true;
-				_iteratorError6 = err;
+				_didIteratorError8 = true;
+				_iteratorError8 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion6 && _iterator6.return) {
-						_iterator6.return();
+					if (!_iteratorNormalCompletion8 && _iterator8.return) {
+						_iterator8.return();
 					}
 				} finally {
-					if (_didIteratorError6) {
-						throw _iteratorError6;
+					if (_didIteratorError8) {
+						throw _iteratorError8;
 					}
 				}
 			}
@@ -1896,6 +2236,8 @@ var SpaceCraftBase = function () {
 
 			diff_position.normalize();
 			var altitude = distance - earth.surfaceRadius();
+
+			this._altitude = altitude;
 
 			//In atmo?
 			if (altitude < earth.atmosphereHeight()) {
@@ -1997,14 +2339,14 @@ var SpaceCraftBase = function () {
 	}, {
 		key: '_getChildDragCoefficient',
 		value: function _getChildDragCoefficient(children, dragCoefficient) {
-			var _iteratorNormalCompletion7 = true;
-			var _didIteratorError7 = false;
-			var _iteratorError7 = undefined;
+			var _iteratorNormalCompletion9 = true;
+			var _didIteratorError9 = false;
+			var _iteratorError9 = undefined;
 
 			try {
 
-				for (var _iterator7 = children[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-					var child = _step7.value;
+				for (var _iterator9 = children[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+					var child = _step9.value;
 
 					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
 
@@ -2020,16 +2362,16 @@ var SpaceCraftBase = function () {
 					dragCoefficient = this._getChildDragCoefficient(child.children, dragCoefficient);
 				}
 			} catch (err) {
-				_didIteratorError7 = true;
-				_iteratorError7 = err;
+				_didIteratorError9 = true;
+				_iteratorError9 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion7 && _iterator7.return) {
-						_iterator7.return();
+					if (!_iteratorNormalCompletion9 && _iterator9.return) {
+						_iterator9.return();
 					}
 				} finally {
-					if (_didIteratorError7) {
-						throw _iteratorError7;
+					if (_didIteratorError9) {
+						throw _iteratorError9;
 					}
 				}
 			}
@@ -2050,14 +2392,14 @@ var SpaceCraftBase = function () {
 	}, {
 		key: '_getChildFormDragArea',
 		value: function _getChildFormDragArea(children, totalFormDragArea) {
-			var _iteratorNormalCompletion8 = true;
-			var _didIteratorError8 = false;
-			var _iteratorError8 = undefined;
+			var _iteratorNormalCompletion10 = true;
+			var _didIteratorError10 = false;
+			var _iteratorError10 = undefined;
 
 			try {
 
-				for (var _iterator8 = children[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-					var child = _step8.value;
+				for (var _iterator10 = children[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+					var child = _step10.value;
 
 					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
 
@@ -2070,16 +2412,16 @@ var SpaceCraftBase = function () {
 					dragCoefficient = this._getChildFormDragArea(child.children, totalFormDragArea);
 				}
 			} catch (err) {
-				_didIteratorError8 = true;
-				_iteratorError8 = err;
+				_didIteratorError10 = true;
+				_iteratorError10 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion8 && _iterator8.return) {
-						_iterator8.return();
+					if (!_iteratorNormalCompletion10 && _iterator10.return) {
+						_iterator10.return();
 					}
 				} finally {
-					if (_didIteratorError8) {
-						throw _iteratorError8;
+					if (_didIteratorError10) {
+						throw _iteratorError10;
 					}
 				}
 			}
@@ -2109,27 +2451,27 @@ var SpaceCraftBase = function () {
 				skinFrictionCoefficient = this.skinFrictionCoefficient();
 			}
 
-			var _iteratorNormalCompletion9 = true;
-			var _didIteratorError9 = false;
-			var _iteratorError9 = undefined;
+			var _iteratorNormalCompletion11 = true;
+			var _didIteratorError11 = false;
+			var _iteratorError11 = undefined;
 
 			try {
-				for (var _iterator9 = this.children[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-					var spacecraft = _step9.value;
+				for (var _iterator11 = this.children[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+					var spacecraft = _step11.value;
 
 					skinFrictionCoefficient += spacecraft.totalSkinFrictionCoefficient();
 				}
 			} catch (err) {
-				_didIteratorError9 = true;
-				_iteratorError9 = err;
+				_didIteratorError11 = true;
+				_iteratorError11 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion9 && _iterator9.return) {
-						_iterator9.return();
+					if (!_iteratorNormalCompletion11 && _iterator11.return) {
+						_iterator11.return();
 					}
 				} finally {
-					if (_didIteratorError9) {
-						throw _iteratorError9;
+					if (_didIteratorError11) {
+						throw _iteratorError11;
 					}
 				}
 			}
@@ -2146,27 +2488,27 @@ var SpaceCraftBase = function () {
 				totalSkinFrictionArea = this.exposedSurfaceArea();
 			}
 
-			var _iteratorNormalCompletion10 = true;
-			var _didIteratorError10 = false;
-			var _iteratorError10 = undefined;
+			var _iteratorNormalCompletion12 = true;
+			var _didIteratorError12 = false;
+			var _iteratorError12 = undefined;
 
 			try {
-				for (var _iterator10 = this.children[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-					var spacecraft = _step10.value;
+				for (var _iterator12 = this.children[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+					var spacecraft = _step12.value;
 
 					totalSkinFrictionArea += spacecraft.exposedSurfaceArea();
 				}
 			} catch (err) {
-				_didIteratorError10 = true;
-				_iteratorError10 = err;
+				_didIteratorError12 = true;
+				_iteratorError12 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion10 && _iterator10.return) {
-						_iterator10.return();
+					if (!_iteratorNormalCompletion12 && _iterator12.return) {
+						_iterator12.return();
 					}
 				} finally {
-					if (_didIteratorError10) {
-						throw _iteratorError10;
+					if (_didIteratorError12) {
+						throw _iteratorError12;
 					}
 				}
 			}
@@ -2188,14 +2530,14 @@ var SpaceCraftBase = function () {
 	}, {
 		key: '_getMaxChildLiftCoefficient',
 		value: function _getMaxChildLiftCoefficient(children, totalLiftCoefficient) {
-			var _iteratorNormalCompletion11 = true;
-			var _didIteratorError11 = false;
-			var _iteratorError11 = undefined;
+			var _iteratorNormalCompletion13 = true;
+			var _didIteratorError13 = false;
+			var _iteratorError13 = undefined;
 
 			try {
 
-				for (var _iterator11 = children[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-					var child = _step11.value;
+				for (var _iterator13 = children[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+					var child = _step13.value;
 
 					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
 
@@ -2207,16 +2549,16 @@ var SpaceCraftBase = function () {
 					totalLiftCoefficient = this._getMaxChildLiftCoefficient(child.children, totalLiftCoefficient);
 				}
 			} catch (err) {
-				_didIteratorError11 = true;
-				_iteratorError11 = err;
+				_didIteratorError13 = true;
+				_iteratorError13 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion11 && _iterator11.return) {
-						_iterator11.return();
+					if (!_iteratorNormalCompletion13 && _iterator13.return) {
+						_iterator13.return();
 					}
 				} finally {
-					if (_didIteratorError11) {
-						throw _iteratorError11;
+					if (_didIteratorError13) {
+						throw _iteratorError13;
 					}
 				}
 			}
@@ -2238,14 +2580,14 @@ var SpaceCraftBase = function () {
 	}, {
 		key: '_getChildLiftArea',
 		value: function _getChildLiftArea(children, totalLiftArea) {
-			var _iteratorNormalCompletion12 = true;
-			var _didIteratorError12 = false;
-			var _iteratorError12 = undefined;
+			var _iteratorNormalCompletion14 = true;
+			var _didIteratorError14 = false;
+			var _iteratorError14 = undefined;
 
 			try {
 
-				for (var _iterator12 = children[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-					var child = _step12.value;
+				for (var _iterator14 = children[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+					var child = _step14.value;
 
 					if (child.aeroDynamicProperties == "ExposedToAirFlow") {
 
@@ -2257,16 +2599,16 @@ var SpaceCraftBase = function () {
 					totalLiftArea = this._getChildLiftArea(child.children, totalLiftArea);
 				}
 			} catch (err) {
-				_didIteratorError12 = true;
-				_iteratorError12 = err;
+				_didIteratorError14 = true;
+				_iteratorError14 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion12 && _iterator12.return) {
-						_iterator12.return();
+					if (!_iteratorNormalCompletion14 && _iterator14.return) {
+						_iterator14.return();
 					}
 				} finally {
-					if (_didIteratorError12) {
-						throw _iteratorError12;
+					if (_didIteratorError14) {
+						throw _iteratorError14;
 					}
 				}
 			}
@@ -2316,27 +2658,27 @@ var SpaceCraftBase = function () {
 		value: function mass() {
 
 			var childMass = 0;
-			var _iteratorNormalCompletion13 = true;
-			var _didIteratorError13 = false;
-			var _iteratorError13 = undefined;
+			var _iteratorNormalCompletion15 = true;
+			var _didIteratorError15 = false;
+			var _iteratorError15 = undefined;
 
 			try {
-				for (var _iterator13 = this.children[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-					var child = _step13.value;
+				for (var _iterator15 = this.children[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+					var child = _step15.value;
 
 					childMass += child.mass();
 				}
 			} catch (err) {
-				_didIteratorError13 = true;
-				_iteratorError13 = err;
+				_didIteratorError15 = true;
+				_iteratorError15 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion13 && _iterator13.return) {
-						_iterator13.return();
+					if (!_iteratorNormalCompletion15 && _iterator15.return) {
+						_iterator15.return();
 					}
 				} finally {
-					if (_didIteratorError13) {
-						throw _iteratorError13;
+					if (_didIteratorError15) {
+						throw _iteratorError15;
 					}
 				}
 			}
@@ -2346,28 +2688,28 @@ var SpaceCraftBase = function () {
 	}, {
 		key: 'setThrottle',
 		value: function setThrottle(throttle) {
-			var _iteratorNormalCompletion14 = true;
-			var _didIteratorError14 = false;
-			var _iteratorError14 = undefined;
+			var _iteratorNormalCompletion16 = true;
+			var _didIteratorError16 = false;
+			var _iteratorError16 = undefined;
 
 			try {
 
-				for (var _iterator14 = this.engines[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-					var engine = _step14.value;
+				for (var _iterator16 = this.engines[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+					var engine = _step16.value;
 
 					engine.adjustThrottle(throttle);
 				}
 			} catch (err) {
-				_didIteratorError14 = true;
-				_iteratorError14 = err;
+				_didIteratorError16 = true;
+				_iteratorError16 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion14 && _iterator14.return) {
-						_iterator14.return();
+					if (!_iteratorNormalCompletion16 && _iterator16.return) {
+						_iterator16.return();
 					}
 				} finally {
-					if (_didIteratorError14) {
-						throw _iteratorError14;
+					if (_didIteratorError16) {
+						throw _iteratorError16;
 					}
 				}
 			}
@@ -2386,7 +2728,7 @@ var SpaceCraftBase = function () {
 
 exports.default = SpaceCraftBase;
 
-},{"objects/core/RenderUtils":4,"objects/math/Vector2":9}],15:[function(require,module,exports){
+},{"objects/core/RenderUtils":5,"objects/engines/EngineExhaust":7,"objects/math/Vector2":11}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2497,7 +2839,13 @@ var MainState = function (_Phaser$State) {
 			this._startText = text;
 			this._buttonGroup.add(text);
 
+			this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
+			this.rightKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
+
+			/////
+
 			this.now = 0;
+			this.timeElapsed = 0;
 			this.hasLaunched = false;
 
 			//////////////////////
@@ -2615,10 +2963,26 @@ var MainState = function (_Phaser$State) {
 
 			this.game.debug.start(20, 20, 'blue');
 
-			var craftPos = this._spacecraft[0];
+			var craftPos = this._spacecraft[2];
 
-			this.game.debug.line('Spacecraft Position: X:' + craftPos.position.x + ' Y:' + craftPos.position.y);
-			this.game.debug.line('thrust: ' + craftPos.thrust + ' Speed: ' + craftPos.velocity.length());
+			this.game.debug.line('Thrust: ' + craftPos.thrust + ' Speed: ' + Math.floor(craftPos.velocity.length()) + ' Altitude: ' + Math.floor(this._spacecraft[0]._altitude * 3.28) + " ft");
+			this.game.debug.line('Mass: ' + Math.floor(craftPos.mass()) + ' PropellantMass: ' + Math.floor(craftPos.propellantMass));
+			this.game.debug.line('Pitch: ' + this._spacecraft[0].pitch);
+			if (this.now) {
+				this.timeElapsed = Math.floor(this.game.time.elapsedSecondsSince(this.now));
+				this.game.debug.line('Elapsed Time: ' + this.timeElapsed);
+			}
+
+			if (this.leftKey.isDown) {
+				this.game.debug.line('Left Key Down');
+			} else if (this.rightKey.isDown) {
+				this.game.debug.line('Right Key Down');
+			}
+			if (this.leftKey.isDown) {
+				this._spacecraft[0].offsetPitch(-.01);
+			} else if (this.rightKey.isDown) {
+				this._spacecraft[0].offsetPitch(.01);
+			}
 
 			var cameraBounds = this._simCamera.getBounds();
 			this._earth.render(cameraBounds);
@@ -2710,7 +3074,12 @@ var MainState = function (_Phaser$State) {
 		key: 'tempController',
 		value: function tempController() {
 
+			this.turn1 = false;
+			this.turn2 = false;
+
 			if (this._isStarted) {
+
+				this.now = this.game.time.time;
 				this.hasLaunched = true;
 				this._spacecraft[2].tempLaunch();
 				this._isStarted = false;
@@ -2723,5 +3092,5 @@ var MainState = function (_Phaser$State) {
 
 exports.default = MainState;
 
-},{"objects/Earth":2,"objects/core/Camera":3,"objects/math/Vector2":9,"objects/spaceCraft/BasePayload":10,"objects/spaceCraft/Fairing":11,"objects/spaceCraft/Falcon9S1":12,"objects/spaceCraft/Falcon9S2":13}]},{},[1])
+},{"objects/Earth":2,"objects/core/Camera":3,"objects/math/Vector2":11,"objects/spaceCraft/BasePayload":12,"objects/spaceCraft/Fairing":13,"objects/spaceCraft/Falcon9S1":14,"objects/spaceCraft/Falcon9S2":15}]},{},[1])
 //# sourceMappingURL=game.js.map

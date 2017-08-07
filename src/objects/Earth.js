@@ -93,15 +93,15 @@ class Earth {
 
 		///Render the atmo
 		//////////
-		//let grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - (ellipse.height * .0000938), ellipse.x, ellipse.y,
-		//	atmoEllipse.height);
-		//grd.addColorStop(0, '#009900');
-		//grd.addColorStop(0.005, '#0182b7');
-		//grd.addColorStop(0.4, '#4db6ff');
-		//grd.addColorStop(1, '#000000');
+		let grd = this.bmd.context.createRadialGradient(ellipse.x, ellipse.y, ellipse.height - (ellipse.height * .0000938), ellipse.x, ellipse.y,
+			atmoEllipse.height);
+		grd.addColorStop(0, '#009900');
+		grd.addColorStop(0.005, '#0182b7');
+		grd.addColorStop(0.4, '#4db6ff');
+		grd.addColorStop(1, '#000000');
 
-		//this.bmd.cls();
-		//this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
+		this.bmd.cls();
+		this.bmd.circle(ellipse.x, ellipse.y, atmoEllipse.height, grd);
 
 
 		//////

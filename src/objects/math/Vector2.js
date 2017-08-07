@@ -88,6 +88,12 @@ class Vector2 {
 		return new Vector2(0, 0);
 	}
 
+	static fromAngle(angle) {
+		let x = Math.cos(angle);
+		let y = Math.sin(angle);
+		return new Vector2(x, y);
+	}
+
 }
 
 export default Vector2;
